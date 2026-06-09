@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="SpaceInvaders/SpaceInvaders.vcxproj" Id="e3c04bd8-bdbb-4fe1-b9f1-01a5723cde94" />
+</Solution>
