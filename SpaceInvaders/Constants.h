@@ -35,7 +35,7 @@ namespace Cfg {
     constexpr float UFO_SPEED         = 140.f;
     constexpr float UFO_INTERVAL_MIN  = 18.f;
     constexpr float UFO_INTERVAL_MAX  = 35.f;
-    constexpr int   UFO_SCORE         = 250;
+    constexpr int   UFO_SCORE         = 500;
 
     // Scores
     constexpr int SCORE_DRONE    = 10;
@@ -61,7 +61,7 @@ namespace Cfg {
     constexpr float HUD_HEIGHT       = 48.f;
 
     // Power-ups
-    constexpr float POWERUP_DROP_CHANCE = 0.12f;  // 12% chance
+    constexpr float POWERUP_DROP_CHANCE = 0.12f; 
     constexpr float POWERUP_SPEED       = 90.f;
     constexpr float POWERUP_DURATION    = 8.f;
 
