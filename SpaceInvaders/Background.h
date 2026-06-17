@@ -31,4 +31,7 @@ private:
     float                       m_scrollMul = 1.f;
 
     bool                        m_vertsDirty = true;
+
+    sf::RectangleShape          m_bgRect;
+    mutable std::array<sf::CircleShape, 3> m_nebCircles;
 };
