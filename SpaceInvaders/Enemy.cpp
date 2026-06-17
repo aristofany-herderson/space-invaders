@@ -44,7 +44,16 @@ static EnemyType typeForRow(int row) {
     }
 }
 
+void EnemyManager::stopUFOLoop() {
+    if (m_ufoAlive) {
+        SFX.stopLoop();
+        m_ufoAlive = false;
+    }
+}
+
 void EnemyManager::spawnFormation(int wave) {
+    stopUFOLoop();
+
     m_enemies.clear();
     m_powerups.clear();
     m_formX = 0.f;
@@ -55,7 +64,7 @@ void EnemyManager::spawnFormation(int wave) {
     m_formSpeed = Cfg::FORM_SPEED_BASE +
         (wave - 1) * Cfg::FORM_SPEED_SCALE * 5.5f;
     m_ufoTimer = rnd(Cfg::UFO_INTERVAL_MIN, Cfg::UFO_INTERVAL_MAX);
-    m_ufoAlive = false;
+    m_aliveCount = 0;
 
     for (int r = 0; r < Cfg::FORMATION_ROWS; ++r) {
         EnemyType t = typeForRow(r);
@@ -81,6 +90,7 @@ void EnemyManager::spawnFormation(int wave) {
                 / std::max(1.f, float(wave) * Cfg::ENEMY_SHOOT_WAVE_SCL + 1.f);
             e.shootTimer = rnd(0.f, e.shootInterval);
             m_enemies.push_back(e);
+            ++m_aliveCount; 
         }
     }
 }
@@ -170,8 +180,7 @@ void EnemyManager::update(float dt, sf::Vector2f playerPos,
     BulletManager& bullets, ParticleSystem& fx,
     HitCallback onKill, KamikazeHitCallback onKamikazeHit)
 {
-    float aliveCount = float(std::count_if(m_enemies.begin(), m_enemies.end(),
-        [](const Enemy& e) { return e.alive; }));
+    float aliveCount = float(m_aliveCount);
     float speedBonus = (1.f + (Cfg::FORMATION_COLS * Cfg::FORMATION_ROWS - aliveCount)
         / (Cfg::FORMATION_COLS * Cfg::FORMATION_ROWS) * 1.4f);
 
@@ -246,6 +255,7 @@ void EnemyManager::update(float dt, sf::Vector2f playerPos,
                 e.explodeTimer = 0.1f;
                 fx.spawnExplosion(e.pos, colFor(e.type));
                 onKill(e.pos, colFor(e.type), scoreFor(e.type));
+                --m_aliveCount;
 
                 PowerupType pu = randomDrop();
                 if (pu != PowerupType::None)
@@ -273,6 +283,7 @@ void EnemyManager::update(float dt, sf::Vector2f playerPos,
         e.explodeTimer = 0.1f;
         fx.spawnExplosion(e.pos, colFor(EnemyType::Kamikaze));
         onKill(e.pos, colFor(EnemyType::Kamikaze), 0);
+        --m_aliveCount;
 
         if (!kamikazeDamageDealtThisFrame) {
             kamikazeDamageDealtThisFrame = true;
@@ -445,8 +456,7 @@ void EnemyManager::drawUFO(sf::RenderTarget& rt) const {
 }
 
 bool EnemyManager::allDead() const {
-    return std::none_of(m_enemies.begin(), m_enemies.end(),
-        [](const Enemy& e) { return e.alive; });
+    return m_aliveCount <= 0;
 }
 
 bool EnemyManager::hasReachedBottom() const {

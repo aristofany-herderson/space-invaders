@@ -16,6 +16,7 @@ struct TextureBank {
     sf::Texture                 powerupRapid;
     sf::Texture                 powerupTriple;
     sf::Texture                 powerupShield;
+    sf::Texture                 star;
 
     void generate();
 

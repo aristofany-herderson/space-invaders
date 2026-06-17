@@ -229,6 +229,8 @@ void TextureBank::generate() {
     if (!tryLoad(player, dir + "player.png"))
         player = makePlayer();
 
+    tryLoad(star, dir + "star.png");
+
     if (!tryLoad(bulletPlayer, dir + "bullet_player.png"))
         bulletPlayer = makeBullet({ 80, 220, 255, 255 }, 5, 18);
     if (!tryLoad(bulletEnemy, dir + "bullet_enemy.png"))

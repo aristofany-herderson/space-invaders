@@ -23,21 +23,21 @@ struct Enemy {
     float         halfW = 16.f;
     float         halfH = 16.f;
 
-    EnemyType     type          = EnemyType::Drone;
-    int           hp            = 1;
-    int           maxHp         = 1;
-    bool          alive         = true;
-    float         shootTimer    = 0.f;
+    EnemyType     type = EnemyType::Drone;
+    int           hp = 1;
+    int           maxHp = 1;
+    bool          alive = true;
+    float         shootTimer = 0.f;
     float         shootInterval = 2.f;
-    float         phase         = 0.f;
-    float         diveTimer     = 0.f;
-    bool          isDiving      = false;
+    float         phase = 0.f;
+    float         diveTimer = 0.f;
+    bool          isDiving = false;
     sf::Vector2f  diveTarget;
-    float         speedMod      = 1.f;
-    float         hitFlash      = 0.f;
-    bool          exploding     = false;
-    float         explodeTimer  = 0.f;
-    int           explodeFrame  = 0;
+    float         speedMod = 1.f;
+    float         hitFlash = 0.f;
+    bool          exploding = false;
+    float         explodeTimer = 0.f;
+    int           explodeFrame = 0;
 };
 
 class EnemyManager {
@@ -57,10 +57,11 @@ public:
     bool         hasReachedBottom() const;
     sf::Vector2f getLowestEnemyPos() const;
 
-    // UFO
     void  updateUFO(float dt, BulletManager& bullets,
         ParticleSystem& fx, HitCallback onKill);
     void  drawUFO(sf::RenderTarget& rt) const;
+
+    void stopUFOLoop();
 
     std::vector<PowerUp>& getPowerups() { return m_powerups; }
 
@@ -68,17 +69,19 @@ private:
     std::vector<Enemy>   m_enemies;
     std::vector<PowerUp> m_powerups;
 
-    float m_formX       = 0.f;
-    float m_formDir     = 1.f;
-    float m_formSpeed   = Cfg::FORM_SPEED_BASE;
-    bool  m_stepping    = false;
-    float m_stepY       = 0.f;
-    int   m_wave        = 1;
+    float m_formX = 0.f;
+    float m_formDir = 1.f;
+    float m_formSpeed = Cfg::FORM_SPEED_BASE;
+    bool  m_stepping = false;
+    float m_stepY = 0.f;
+    int   m_wave = 1;
 
     bool         m_ufoAlive = false;
     sf::Vector2f m_ufoPos;
     float        m_ufoTimer = 20.f;
-    float        m_ufoDir   = 1.f;
+    float        m_ufoDir = 1.f;
+
+    int m_aliveCount = 0;
 
     void spawnUFO();
     void tryEnemyShoot(Enemy& e, BulletManager& bullets, float dt);

@@ -17,7 +17,6 @@ void ParticleSystem::spawnExplosion(sf::Vector2f pos, sf::Color col, int count) 
         float sz   = rnd(1.5f, 5.f);
         sf::Color c = col;
         c.a = 255;
-        // mix toward white for core particles
         if (i < count / 4) { c.r = 255; c.g = 255; c.b = 220; sz += 1.5f; }
         m_particles.push_back({ pos,
             {std::cos(ang)*spd, std::sin(ang)*spd},
@@ -45,7 +44,7 @@ void ParticleSystem::update(float dt) {
     for (auto& p : m_particles) {
         p.life -= dt;
         p.pos  += p.vel * dt;
-        p.vel  *= (1.f - dt * 2.2f);   // drag
+        p.vel  *= (1.f - dt * 2.2f); 
         float ratio = p.life / p.maxLife;
         p.color.a = static_cast<std::uint8_t>(255 * ratio);
         p.size    = p.size * (0.92f + ratio * 0.08f);
@@ -70,7 +69,6 @@ void ParticleSystem::update(float dt) {
 
 void ParticleSystem::draw(sf::RenderTarget& rt, const sf::Font& font) const {
     if (!m_particles.empty()) {
-        // Redimensiona só se necessário — sem heap alloc todo frame
         const std::size_t needed = m_particles.size() * 6;
         if (m_verts.getVertexCount() != needed) {
             m_verts.setPrimitiveType(sf::PrimitiveType::Triangles);
@@ -90,7 +88,6 @@ void ParticleSystem::draw(sf::RenderTarget& rt, const sf::Font& font) const {
         rt.draw(m_verts);
     }
 
-    // Floating score texts (poucos, sf::Text é aceitável)
     for (const auto& t : m_texts) {
         sf::Text txt(font, t.text, t.fontSize);
         txt.setFillColor(t.color);

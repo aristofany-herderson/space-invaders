@@ -22,7 +22,6 @@ void Shield::init(sf::Vector2f topLeft) {
     "1110000111"
     };
 
-    
     for (int r = 0; r < Cfg::SHIELD_ROWS; ++r) {
         for (int c = 0; c < Cfg::SHIELD_COLS; ++c) {
 
@@ -37,21 +36,6 @@ void Shield::init(sf::Vector2f topLeft) {
             m_blocks.push_back({ pos, 3, true });
         }
     }
-    //for (int r = 0; r < Cfg::SHIELD_ROWS; ++r) {
-    //    for (int c = 0; c < Cfg::SHIELD_COLS; ++c) {
-    //        // Carve the classic bunker arch at bottom centre
-    //        bool arch = (r >= Cfg::SHIELD_ROWS - 2) &&
-    //                    (c >= Cfg::SHIELD_COLS/2 - 2) &&
-    //                    (c <= Cfg::SHIELD_COLS/2 + 1);
-    //        if (arch) continue;
-
-    //        sf::Vector2f pos = {
-    //            topLeft.x + c * m_blockSize,
-    //            topLeft.y + r * m_blockSize
-    //        };
-    //        m_blocks.push_back({pos, 3, true});
-    //    }
-    //}
 }
 
 void Shield::draw(sf::RenderTarget& rt) const {
