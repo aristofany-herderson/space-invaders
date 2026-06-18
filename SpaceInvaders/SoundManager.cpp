@@ -1,15 +1,19 @@
 #include "SoundManager.h"
+#include <algorithm>
 #include <iostream>
 
 SoundManager::SoundManager()
 {
-    auto dummy = sf::SoundBuffer();
-
+    sf::SoundBuffer dummy;
+    m_pool.reserve(32);
+    m_poolBaseVol.reserve(32);
     for (int i = 0; i < 32; ++i)
     {
         m_pool.emplace_back(dummy);
+        m_poolBaseVol.push_back(80.f);
     }
 }
+
 void SoundManager::loadAll()
 {
     const std::string dir = "assets/sounds/";
@@ -29,32 +33,22 @@ void SoundManager::loadAll()
     }
 }
 
-void SoundManager::play(
-    const std::string &name,
-    float vol,
-    float pitch)
+void SoundManager::play(const std::string &name, float vol, float pitch)
 {
     auto it = m_buffers.find(name);
-
     if (it == m_buffers.end())
         return;
 
     auto &s = m_pool[m_nextVoice];
-
     s.stop();
-
     s.setBuffer(it->second);
-
-    s.setVolume(
-        vol * masterVolume / 100.f);
-
+    s.setVolume(vol * m_masterVol / 100.f);
     s.setPitch(pitch);
-
     s.play();
 
-    m_nextVoice++;
+    m_poolBaseVol[m_nextVoice] = vol; // guarda o base para re-escalar depois
 
-    if (m_nextVoice >= m_pool.size())
+    if (++m_nextVoice >= m_pool.size())
         m_nextVoice = 0;
 }
 
@@ -68,8 +62,9 @@ void SoundManager::startLoop(const std::string &name, float vol)
     if (it == m_buffers.end())
         return;
 
+    m_loopBaseVol = vol;
     m_loopSound = std::make_unique<sf::Sound>(it->second);
-    m_loopSound->setVolume(vol * masterVolume / 100.f);
+    m_loopSound->setVolume(vol * m_masterVol / 100.f);
     m_loopSound->setLooping(true);
     m_loopSound->play();
     m_loopName = name;
@@ -87,18 +82,19 @@ void SoundManager::stopLoop()
 
 void SoundManager::startMusic(const std::string &file, float vol)
 {
+    m_musicBaseVol = vol;
+
     if (!m_music)
         m_music = std::make_unique<sf::Music>();
 
     if (!m_music->openFromFile(file))
     {
-        std::cerr << "[Music] nao encontrado: "
-                  << file << "\n";
+        std::cerr << "[Music] nao encontrado: " << file << "\n";
         return;
     }
 
     m_music->setLooping(true);
-    m_music->setVolume(vol * masterVolume / 100.f);
+    m_music->setVolume(vol * m_masterVol / 100.f);
     m_music->play();
 }
 
@@ -106,4 +102,23 @@ void SoundManager::stopMusic()
 {
     if (m_music)
         m_music->stop();
+}
+
+// Atualiza TUDO que está tocando agora mesmo
+void SoundManager::setMasterVolume(float v)
+{
+    m_masterVol = std::clamp(v, 0.f, 100.f);
+
+    // Música de fundo
+    if (m_music)
+        m_music->setVolume(m_musicBaseVol * m_masterVol / 100.f);
+
+    // Loop de efeito (ex: UFO)
+    if (m_loopSound)
+        m_loopSound->setVolume(m_loopBaseVol * m_masterVol / 100.f);
+
+    // Sons curtos no pool (os que ainda estão tocando)
+    for (std::size_t i = 0; i < m_pool.size(); ++i)
+        if (m_pool[i].getStatus() == sf::Sound::Status::Playing)
+            m_pool[i].setVolume(m_poolBaseVol[i] * m_masterVol / 100.f);
 }

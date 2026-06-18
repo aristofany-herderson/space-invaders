@@ -357,4 +357,6 @@ void TextureBank::generate()
         powerupTriple = makePowerup({80, 255, 200, 255}, "T");
     if (!tryLoad(powerupShield, dir + "powerup_shield.png"))
         powerupShield = makePowerup({100, 150, 255, 255}, "S");
+
+    tryLoad(volumeIcon, dir + "volume.png");
 }

@@ -26,6 +26,7 @@ struct TextureBank
     sf::Texture powerupTriple;
     sf::Texture powerupShield;
     sf::Texture star;
+    sf::Texture volumeIcon;
 
     void generate();
 

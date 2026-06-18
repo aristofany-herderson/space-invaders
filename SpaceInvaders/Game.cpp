@@ -5,6 +5,7 @@
 #include <cmath>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
 Game::Game()
     : m_window(sf::VideoMode({Cfg::W, Cfg::H}), Cfg::TITLE,
@@ -24,6 +25,25 @@ Game::Game()
         throw std::runtime_error("Nao foi possivel carregar assets/fonts/font.ttf");
 
     loadHighScore();
+    loadSettings();
+}
+
+void Game::loadSettings()
+{
+    std::ifstream f("settings.dat");
+    if (f.is_open())
+    {
+        f >> m_volume;
+        m_volume = std::clamp(m_volume, 0.f, 100.f);
+        SFX.setMasterVolume(m_volume);
+    }
+}
+
+void Game::saveSettings()
+{
+    std::ofstream f("settings.dat");
+    if (f.is_open())
+        f << m_volume;
 }
 
 void Game::loadHighScore()
@@ -41,6 +61,66 @@ void Game::saveHighScore()
         std::ofstream f("hiscore.dat");
         f << m_hiScore;
     }
+}
+
+void Game::drawVolumeSlider(float cx, float cy, float width)
+{
+    const float iconSz = 18.f;
+    const float trackH = 4.f;
+    const float knobR = 6.f;
+    const float pad = 8.f;
+    const float lblW = 34.f;
+
+    float totalW = iconSz + pad + width + pad + lblW;
+    float startX = cx - totalW / 2.f;
+    float iconX = startX;
+    float trackX = startX + iconSz + pad;
+    float trackY = cy - trackH / 2.f;
+    float knobX = trackX + width * (m_volume / 100.f);
+    float knobY = cy;
+
+    sf::Sprite icon(GFX.volumeIcon);
+    auto isz = GFX.volumeIcon.getSize();
+    float sc = iconSz / float(std::max(isz.x, isz.y));
+    icon.setScale({sc, sc});
+    icon.setOrigin({isz.x / 2.f, isz.y / 2.f});
+    icon.setPosition({iconX + iconSz / 2.f, cy});
+    m_window.draw(icon);
+
+    RoundedRectShape track({width, trackH}, trackH / 2.f);
+    track.setPosition({trackX, trackY});
+    track.setFillColor({25, 25, 55, 210});
+    track.setOutlineColor({60, 90, 170, 160});
+    track.setOutlineThickness(1.f);
+    m_window.draw(track);
+
+    float fillW = width * (m_volume / 100.f);
+    if (fillW > trackH)
+    {
+        RoundedRectShape fill({fillW, trackH},
+                              std::min(trackH / 2.f, fillW / 2.f));
+        fill.setPosition({trackX, trackY});
+        fill.setFillColor({70, 170, 255, 220});
+        m_window.draw(fill);
+    }
+
+    sf::CircleShape knob(knobR);
+    knob.setOrigin({knobR, knobR});
+    knob.setPosition({knobX, knobY});
+    knob.setFillColor({210, 235, 255, 255});
+    knob.setOutlineColor({80, 150, 255, 255});
+    knob.setOutlineThickness(1.5f);
+    m_window.draw(knob);
+
+    sf::Text pct(m_font,
+                 std::to_string(static_cast<int>(m_volume)) + "%", 12u);
+    pct.setFillColor({150, 185, 225, 200});
+    auto pb = pct.getLocalBounds();
+    pct.setPosition({trackX + width + pad, cy - pb.size.y / 2.f - pb.position.y});
+    m_window.draw(pct);
+
+    m_volTrackRect = {{trackX - knobR, cy - knobR - 2.f},
+                      {width + knobR * 2.f, knobR * 2.f + 4.f}};
 }
 
 void Game::startGame()
@@ -163,6 +243,49 @@ void Game::processEvents()
                     sf::Vector2f mp{float(mb->position.x), float(mb->position.y)};
                     if (m_playButtonRect.contains(mp))
                         startGame();
+                }
+            }
+        }
+
+        if (m_state == GameState::Menu || m_state == GameState::Paused)
+        {
+            if (const auto *mb = ev->getIf<sf::Event::MouseButtonPressed>())
+            {
+                if (mb->button == sf::Mouse::Button::Left)
+                {
+                    sf::Vector2f mp{float(mb->position.x), float(mb->position.y)};
+                    if (m_volTrackRect.contains(mp))
+                    {
+                        m_volumeDragging = true;
+                        // Atualiza volume imediatamente no clique
+                        float ratio = std::clamp(
+                            (mp.x - m_volTrackRect.position.x) / m_volTrackRect.size.x,
+                            0.f, 1.f);
+                        m_volume = ratio * 100.f;
+                        SFX.setMasterVolume(m_volume);
+                    }
+                }
+            }
+
+            if (const auto *mr = ev->getIf<sf::Event::MouseButtonReleased>())
+            {
+                if (mr->button == sf::Mouse::Button::Left && m_volumeDragging)
+                {
+                    m_volumeDragging = false;
+                    saveSettings();
+                }
+            }
+
+            if (const auto *mm = ev->getIf<sf::Event::MouseMoved>())
+            {
+                if (m_volumeDragging)
+                {
+                    sf::Vector2f mp{float(mm->position.x), float(mm->position.y)};
+                    float ratio = std::clamp(
+                        (mp.x - m_volTrackRect.position.x) / m_volTrackRect.size.x,
+                        0.f, 1.f);
+                    m_volume = ratio * 100.f;
+                    SFX.setMasterVolume(m_volume);
                 }
             }
         }
@@ -393,7 +516,7 @@ void Game::render()
         break;
 
     case GameState::Countdown:
-        // m_shields.draw(m_window);
+        m_shields.draw(m_window);
         // m_enemies.draw(m_window);
         // m_enemies.drawUFO(m_window);
         m_player.draw(m_window);
@@ -902,7 +1025,7 @@ void Game::drawMenu()
             orTxt.setFillColor({140, 160, 200, 180});
             auto b = orTxt.getLocalBounds();
             orTxt.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-            orTxt.setPosition({ox + OR_W / 2.f, oy + BTN_H / 2.f});
+            orTxt.setPosition({ox + (OR_W / 2.f) + 1.0f, oy + (BTN_H / 2.f) - 1.0f});
             m_window.draw(orTxt);
         };
 
@@ -951,7 +1074,7 @@ void Game::drawMenu()
         drawKey("SPACE", kx0, row1Y, BTN_SPACE_W);
         drawOr(kx0 + BTN_SPACE_W + 2.f, row1Y - 2.f);
         drawKey("Z", kx0 + BTN_SPACE_W + OR_W + COL_GAP, row1Y);
-        drawLabel("SHOOT", kx0 + BTN_SPACE_W + OR_W + BTN_W + COL_GAP * 2 - 2.f, row1Y - 4.f);
+        drawLabel("SHOOT", kx0 + BTN_SPACE_W + OR_W + BTN_W + COL_GAP * 2, row1Y - 4.f);
 
         drawKey("ESC", kx0, row2Y, BTN_W * 1.5f);
         drawLabel("PAUSE", kx0 + BTN_W * 1.5f + COL_GAP, row2Y - 2.f);
@@ -983,6 +1106,20 @@ void Game::drawMenu()
         hint.setPosition({cx, float(Cfg::H) - 26.f});
         m_window.draw(hint);
     }
+
+    {
+        const float sliderCX = float(Cfg::W) - 115.f;
+        const float sliderCY = float(Cfg::H) - 38.f;
+
+        sf::Text vlbl(m_font, "VOLUME", 10u);
+        vlbl.setFillColor({120, 150, 200, 160});
+        auto vb = vlbl.getLocalBounds();
+        vlbl.setOrigin({vb.size.x / 2.f, 0.f});
+        vlbl.setPosition({sliderCX, sliderCY - 22.f});
+        m_window.draw(vlbl);
+
+        drawVolumeSlider(sliderCX, sliderCY, 110.f);
+    }
 }
 
 void Game::drawPause()
@@ -1010,6 +1147,22 @@ void Game::drawPause()
 
     drawActionRow(cx, cy - 12.f, {"ESC", "P"}, "Resume");
     drawActionRow(cx, cy + 42.f, {"M"}, "Menu");
+
+    {
+        sf::RectangleShape sep2({220.f, 1.f});
+        sep2.setFillColor({60, 80, 180, 60});
+        sep2.setPosition({cx - 110.f, cy + 95.f});
+        m_window.draw(sep2);
+
+        sf::Text vlbl(m_font, "VOLUME", 12u);
+        vlbl.setFillColor({140, 170, 220, 180});
+        auto vb = vlbl.getLocalBounds();
+        vlbl.setOrigin({vb.size.x / 2.f, 0.f});
+        vlbl.setPosition({cx, cy + 102.f});
+        m_window.draw(vlbl);
+
+        drawVolumeSlider(cx, cy + 128.f, 160.f);
+    }
 }
 
 void Game::drawGameOver()

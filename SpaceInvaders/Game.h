@@ -37,6 +37,14 @@ private:
     GameState m_state = GameState::Menu;
     int m_wave = 1;
     int m_hiScore = 0;
+    float m_volume = 80.f;
+    bool m_volumeDragging = false;
+    sf::FloatRect m_volTrackRect;
+
+    void loadSettings();
+    void saveSettings();
+
+    void drawVolumeSlider(float cx, float cy, float width = 130.f);
 
     Background m_bg;
     ShieldManager m_shields;
