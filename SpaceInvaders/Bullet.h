@@ -16,7 +16,7 @@ public:
 class BulletManager {
 public:
     void spawnPlayer(sf::Vector2f pos);
-    void spawnEnemy(sf::Vector2f pos);
+
     void spawnEnemy(sf::Vector2f pos, sf::Color color = { 255, 80, 80, 255 });
     void spawnTriple(sf::Vector2f pos);
 
@@ -30,8 +30,8 @@ private:
     std::vector<Bullet> m_bullets;
 
     void spawn(sf::Vector2f pos, sf::Vector2f vel, BulletOwner owner);
-    
-    mutable sf::VertexArray m_vaPlayer;  
-    mutable sf::VertexArray m_vaEnemy;   
-    mutable sf::VertexArray m_vaTrail; 
+
+    mutable sf::VertexArray m_vaPlayer;
+    mutable sf::VertexArray m_vaEnemy;
+    mutable sf::VertexArray m_vaTrail;
 };

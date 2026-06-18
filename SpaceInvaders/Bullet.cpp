@@ -3,25 +3,18 @@
 #include "SpriteGen.h"
 #include <algorithm>
 
-void BulletManager::spawn(sf::Vector2f pos, sf::Vector2f vel, BulletOwner owner) {
+void BulletManager::spawn(sf::Vector2f pos, sf::Vector2f vel, BulletOwner owner)
+{
     m_bullets.push_back({ pos, vel, owner, true });
 }
 
-void BulletManager::spawnPlayer(sf::Vector2f pos) {
+void BulletManager::spawnPlayer(sf::Vector2f pos)
+{
     spawn(pos, { 0.f, -Cfg::PLAYER_BULLET_SPD }, BulletOwner::Player);
 }
 
-void BulletManager::spawnEnemy(sf::Vector2f pos) {
-    spawn(pos, { 0.f, Cfg::ENEMY_BULLET_SPD }, BulletOwner::Enemy);
-}
-
-void BulletManager::spawnTriple(sf::Vector2f pos) {
-    spawn(pos, { -80.f, -Cfg::PLAYER_BULLET_SPD * 0.95f }, BulletOwner::Player);
-    spawn(pos, { 0.f, -Cfg::PLAYER_BULLET_SPD }, BulletOwner::Player);
-    spawn(pos, { 80.f, -Cfg::PLAYER_BULLET_SPD * 0.95f }, BulletOwner::Player);
-}
-
-void BulletManager::spawnEnemy(sf::Vector2f pos, sf::Color color) {
+void BulletManager::spawnEnemy(sf::Vector2f pos, sf::Color color)
+{
     Bullet b;
     b.pos = pos;
     b.vel = { 0.f, Cfg::ENEMY_BULLET_SPD };
@@ -31,7 +24,15 @@ void BulletManager::spawnEnemy(sf::Vector2f pos, sf::Color color) {
     m_bullets.push_back(b);
 }
 
-void BulletManager::update(float dt) {
+void BulletManager::spawnTriple(sf::Vector2f pos)
+{
+    spawn(pos, { -80.f, -Cfg::PLAYER_BULLET_SPD * 0.95f }, BulletOwner::Player);
+    spawn(pos, { 0.f,  -Cfg::PLAYER_BULLET_SPD }, BulletOwner::Player);
+    spawn(pos, { 80.f, -Cfg::PLAYER_BULLET_SPD * 0.95f }, BulletOwner::Player);
+}
+
+void BulletManager::update(float dt)
+{
     for (auto& b : m_bullets) {
         b.pos += b.vel * dt;
         if (b.pos.y < -20.f || b.pos.y > float(Cfg::H) + 20.f ||
@@ -65,7 +66,8 @@ static inline void writeQuad(sf::VertexArray& va, std::size_t vi,
     va[vi + 5] = { bl, col, uvBL };
 }
 
-void BulletManager::draw(sf::RenderTarget& rt) const {
+void BulletManager::draw(sf::RenderTarget& rt) const
+{
     if (m_bullets.empty()) return;
 
     m_vaPlayer.setPrimitiveType(sf::PrimitiveType::Triangles);
