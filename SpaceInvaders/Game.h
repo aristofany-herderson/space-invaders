@@ -1,6 +1,8 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include <vector>
+#include <string>
 #include "Background.h"
 #include "SoundManager.h"
 #include "Shield.h"
@@ -9,6 +11,7 @@
 #include "Player.h"
 #include "Particle.h"
 #include "SpriteGen.h"
+#include "RoundedRectShape.h"
 #include <optional>
 
 enum class GameState { Menu, Countdown, Playing, Paused, GameOver, Win };
@@ -23,7 +26,7 @@ private:
     sf::Font         m_font;
     sf::Clock        m_clock;
     GameState        m_state = GameState::Menu;
-    int              m_wave = 1;
+    int              m_wave  = 1;
     int              m_hiScore = 0;
 
     Background     m_bg;
@@ -33,17 +36,17 @@ private:
     Player         m_player;
     ParticleSystem m_fx;
 
-    float     m_shakeTimer = 0.f;
-    float     m_shakeMag = 0.f;
-    float     m_flashTimer = 0.f;
-    sf::Color m_flashCol = sf::Color::Transparent;
+    float     m_shakeTimer  = 0.f;
+    float     m_shakeMag    = 0.f;
+    float     m_flashTimer  = 0.f;
+    sf::Color m_flashCol    = sf::Color::Transparent;
     float     m_bgScrollSpd = 1.f;
 
-    float m_comboTimer = 0.f;
-    int   m_combo = 0;
+    float m_comboTimer    = 0.f;
+    int   m_combo         = 0;
     float m_waveTextTimer = 0.f;
 
-    float         m_menuPulse = 0.f;
+    float         m_menuPulse       = 0.f;
     sf::FloatRect m_playButtonRect{};
 
     float m_countdownTimer = 0.f;
@@ -66,12 +69,17 @@ private:
     void drawPowerupHUD();
     void drawCountdown();
 
-    void loadHighScore();
-    void saveHighScore();
+    void drawActionRow(float cx, float y,
+                       const std::vector<std::string>& keys,
+                       const std::string& desc,
+                       unsigned descFontSize = 17u);
 
     void checkPlayerBulletVsShields();
     void checkEnemyBulletVsPlayer();
     void checkEnemyBulletVsShields();
     void checkPowerupVsPlayer();
     void checkEnemyVsPlayer();
+
+    void loadHighScore();
+    void saveHighScore();
 };

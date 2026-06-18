@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "Constants.h"
+#include "RoundedRectShape.h"
 #include <fstream>
 #include <cmath>
 #include <sstream>
@@ -13,19 +14,15 @@ Game::Game()
 
     GFX.generate();
     SFX.loadAll();
-    SFX.startMusic(
-        "assets/sounds/bg_music.wav",
-        35.f);
+    SFX.startMusic("assets/sounds/bg_music.wav", 80.f);
 
     sf::Image icon;
     if (icon.loadFromFile("assets/icon.png"))
         m_window.setIcon(icon);
 
     if (!m_font.openFromFile("assets/fonts/font.ttf"))
-    {
-        throw std::runtime_error(
-            "Nao foi possivel carregar assets/fonts/font.ttf");
-    }
+        throw std::runtime_error("Nao foi possivel carregar assets/fonts/font.ttf");
+
     loadHighScore();
 }
 
@@ -91,6 +88,7 @@ void Game::triggerShake(float mag, float dur)
     m_shakeMag = mag;
     m_shakeTimer = dur;
 }
+
 void Game::triggerFlash(sf::Color col, float dur)
 {
     m_flashCol = col;
@@ -132,6 +130,7 @@ void Game::processEvents()
                     m_window.close();
                 break;
             case GameState::Countdown:
+
                 break;
             case GameState::Playing:
                 if (kp->code == sf::Keyboard::Key::Escape)
@@ -227,9 +226,7 @@ void Game::update(float dt)
                 m_fx.addFloatingScore(pos, finalScore, col);
             }
             SFX.play("explosion", 75.f, 0.9f + (std::rand() % 200) / 1000.f);
-            triggerShake(3.f, 0.15f); },
-
-                     [this](sf::Vector2f pos)
+            triggerShake(3.f, 0.15f); }, [this](sf::Vector2f pos)
                      {
             if (m_player.hasShield()) {
                 triggerShake(4.f, 0.2f);
@@ -237,7 +234,6 @@ void Game::update(float dt)
                 SFX.play("shield_hit", 80.f);
                 return;
             }
-
             auto result = m_player.takeDamage(m_fx);
             if (result != DamageResult::Ignored) {
                 triggerShake(10.f, 0.4f);
@@ -418,12 +414,14 @@ void Game::render()
         if (m_state == GameState::Paused)
             drawPause();
         break;
+
     case GameState::GameOver:
         m_shields.draw(m_window);
         m_fx.draw(m_window, m_font);
         drawGameOver();
         drawHUD();
         break;
+
     case GameState::Win:
         drawWin();
         drawHUD();
@@ -445,31 +443,102 @@ void Game::render()
     m_window.setView(m_window.getDefaultView());
 }
 
+void Game::drawActionRow(float cx, float y,
+                         const std::vector<std::string> &keys,
+                         const std::string &desc,
+                         unsigned descFontSize)
+{
+    const float badgeH = 34.f;
+    const float cornerRadius = 6.f;
+    const float padX = 13.f;
+    const float keyGap = 6.f;
+    const float descGap = 16.f;
+    const unsigned keyFont = 14u;
+
+    std::vector<float> widths;
+    float totalKeyW = 0.f;
+    for (std::size_t ki = 0; ki < keys.size(); ++ki)
+    {
+        sf::Text kt(m_font, keys[ki], keyFont);
+        float tw = kt.getLocalBounds().size.x;
+        float w = std::max(badgeH, tw + padX * 2.f);
+        widths.push_back(w);
+        totalKeyW += w + (ki > 0 ? keyGap : 0.f);
+    }
+
+    sf::Text descTxt(m_font, desc, descFontSize);
+    auto db = descTxt.getLocalBounds();
+    float descW = db.size.x;
+
+    float rowW = totalKeyW + descGap + descW;
+    float startX = cx - rowW / 2.f;
+
+    float x = startX;
+    for (std::size_t ki = 0; ki < keys.size(); ++ki)
+    {
+        if (ki > 0)
+            x += keyGap;
+        float kw = widths[ki];
+
+        RoundedRectShape badge({kw, badgeH}, cornerRadius);
+        badge.setPosition({x, y});
+        badge.setFillColor({30, 50, 100, 200});
+        badge.setOutlineColor({100, 160, 255, 220});
+        badge.setOutlineThickness(1.5f);
+        m_window.draw(badge);
+
+        RoundedRectShape shine({kw - 4.f, 5.f}, 3.f, 4u);
+        shine.setPosition({x + 2.f, y + 2.f});
+        shine.setFillColor({255, 255, 255, 28});
+        m_window.draw(shine);
+
+        sf::RectangleShape shadow({kw, 3.f});
+        shadow.setPosition({x, y + badgeH + 1.f});
+        shadow.setFillColor({0, 0, 0, 55});
+        m_window.draw(shadow);
+
+        sf::Text kt(m_font, keys[ki], keyFont);
+        kt.setFillColor({200, 230, 255, 255});
+        auto kb = kt.getLocalBounds();
+        kt.setOrigin({kb.position.x + kb.size.x / 2.f,
+                      kb.position.y + kb.size.y / 2.f});
+        kt.setPosition({x + kw / 2.f, y + badgeH / 2.f});
+        m_window.draw(kt);
+
+        x += kw;
+    }
+
+    descTxt.setFillColor({180, 200, 255, 210});
+    descTxt.setOrigin({0.f, db.position.y + db.size.y / 2.f});
+    descTxt.setPosition({startX + totalKeyW + descGap, y + badgeH / 2.f});
+    m_window.draw(descTxt);
+}
+
 void Game::drawCountdown()
 {
     float phase = 4.0f - m_countdownTimer;
     int step = static_cast<int>(phase);
     float t = phase - static_cast<float>(step);
 
-    std::string text;
+    std::string label;
     sf::Color col;
 
     switch (step)
     {
     case 0:
-        text = "3";
+        label = "3";
         col = {255, 60, 60, 255};
         break;
     case 1:
-        text = "2";
+        label = "2";
         col = {255, 220, 50, 255};
         break;
     case 2:
-        text = "1";
+        label = "1";
         col = {60, 255, 100, 255};
         break;
     default:
-        text = "GO!";
+        label = "GO!";
         col = {80, 220, 255, 255};
         break;
     }
@@ -481,16 +550,14 @@ void Game::drawCountdown()
         alpha = 1.f - (t - 0.75f) / 0.25f;
     col.a = static_cast<std::uint8_t>(std::max(0.f, alpha) * 255.f);
 
-    const sf::Color outline{0, 0, 0, col.a};
-
     const float cx = float(Cfg::W) / 2.f;
     const float cy = float(Cfg::H) / 2.f - 20.f;
 
-    unsigned fsize = (step == 3) ? 52u : 72u;
+    unsigned fsize = (step == 3) ? 64u : 88u;
 
-    sf::Text txt(m_font, text, fsize);
+    sf::Text txt(m_font, label, fsize);
     txt.setFillColor(col);
-    txt.setOutlineColor(outline);
+    txt.setOutlineColor({0, 0, 0, col.a});
     txt.setOutlineThickness(5.f);
 
     auto b = txt.getLocalBounds();
@@ -498,13 +565,12 @@ void Game::drawCountdown()
                    b.position.y + b.size.y / 2.f});
     txt.setScale({popScale, popScale});
     txt.setPosition({cx, cy});
-
     m_window.draw(txt);
 
     const float barW = 200.f;
     const float barH = 4.f;
     const float barX = cx - barW / 2.f;
-    const float barY = cy + 70.f;
+    const float barY = cy + 78.f;
 
     sf::RectangleShape track({barW, barH});
     track.setPosition({barX, barY});
@@ -515,7 +581,7 @@ void Game::drawCountdown()
     if (filled > 0.f)
     {
         sf::Color barCol = col;
-        barCol.a = static_cast<std::uint8_t>(180);
+        barCol.a = 180;
         sf::RectangleShape fill({filled, barH});
         fill.setPosition({barX, barY});
         fill.setFillColor(barCol);
@@ -537,26 +603,28 @@ void Game::drawHUD()
     {
         std::ostringstream ss;
         ss << std::setw(8) << std::setfill('0') << m_player.getScore();
-        sf::Text t(m_font, "SCORE " + ss.str(), 13u);
+        sf::Text t(m_font, "SCORE " + ss.str(), 17u);
         t.setFillColor({80, 220, 255, 255});
-        t.setPosition({12.f, 14.f});
+        t.setPosition({12.f, 12.f});
         m_window.draw(t);
     }
+
     {
         int hi = std::max(m_hiScore, m_player.getScore());
         std::ostringstream ss;
         ss << std::setw(8) << std::setfill('0') << hi;
-        sf::Text t(m_font, "HI " + ss.str(), 11u);
+        sf::Text t(m_font, "HI " + ss.str(), 15u);
         t.setFillColor({255, 220, 80, 200});
         auto b = t.getLocalBounds();
-        t.setPosition({float(Cfg::W) / 2.f - b.size.x / 2.f, 16.f});
+        t.setPosition({float(Cfg::W) / 2.f - b.size.x / 2.f, 14.f});
         m_window.draw(t);
     }
+
     {
-        sf::Text t(m_font, "WAVE " + std::to_string(m_wave), 13u);
+        sf::Text t(m_font, "WAVE " + std::to_string(m_wave), 17u);
         t.setFillColor({200, 60, 255, 220});
         auto b = t.getLocalBounds();
-        t.setPosition({float(Cfg::W) - b.size.x - 12.f, 14.f});
+        t.setPosition({float(Cfg::W) - b.size.x - 12.f, 12.f});
         m_window.draw(t);
     }
 
@@ -575,7 +643,7 @@ void Game::drawHUD()
         lifeIcon.setPosition({npos.x - 22.f, npos.y});
         m_window.draw(lifeIcon);
 
-        sf::Text lifeText(m_font, "+1 UP", 14u);
+        sf::Text lifeText(m_font, "+1 UP", 18u);
         lifeText.setFillColor({80, 255, 160, alpha});
         lifeText.setOutlineColor({0, 0, 0, alpha});
         lifeText.setOutlineThickness(2.f);
@@ -591,7 +659,7 @@ void Game::drawHUD()
     {
         float alpha = std::min(1.f, m_waveTextTimer) * 255.f;
         std::string wt = (m_wave == 1) ? "WAVE 1" : "WAVE " + std::to_string(m_wave) + "  INCOMING!";
-        sf::Text t(m_font, wt, 22u);
+        sf::Text t(m_font, wt, 28u);
         t.setFillColor({255, 255, 80, static_cast<std::uint8_t>(alpha)});
         t.setOutlineColor({0, 0, 0, static_cast<std::uint8_t>(alpha)});
         t.setOutlineThickness(2.f);
@@ -603,7 +671,7 @@ void Game::drawHUD()
 
     if (m_combo >= 3 && m_comboTimer > 0.f)
     {
-        sf::Text t(m_font, "x" + std::to_string(m_combo) + " COMBO!", 16u);
+        sf::Text t(m_font, "x" + std::to_string(m_combo) + " COMBO!", 21u);
         t.setFillColor({255, 200, 50, 220});
         auto b = t.getLocalBounds();
         t.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
@@ -662,7 +730,7 @@ void Game::drawPowerupHUD()
         const auto &s = slots[i];
         float y = baseY + float(i) * (slotH + gap);
 
-        sf::RectangleShape bg({iconSz + barW + 30.f, slotH - 2.f});
+        RoundedRectShape bg({iconSz + barW + 30.f, slotH - 2.f}, 4.f);
         bg.setPosition({padX - 4.f, y});
         bg.setFillColor({10, 10, 30, 160});
         bg.setOutlineColor({s.barCol.r, s.barCol.g, s.barCol.b, 80});
@@ -678,7 +746,6 @@ void Game::drawPowerupHUD()
 
         float ratio = std::min(1.f, s.timer / Cfg::POWERUP_DURATION);
         float filledW = barW * ratio;
-
         float barX = padX + iconSz + 6.f;
         float barY = y + (slotH - barH) / 2.f + 2.f;
 
@@ -701,7 +768,7 @@ void Game::drawPowerupHUD()
         }
 
         int secs = static_cast<int>(std::ceil(s.timer));
-        sf::Text timeText(m_font, std::to_string(secs) + "s", 9u);
+        sf::Text timeText(m_font, std::to_string(secs) + "s", 13u);
         timeText.setFillColor(s.timer < 3.f
                                   ? sf::Color{255, 80, 80, 255}
                                   : sf::Color{s.barCol.r, s.barCol.g, s.barCol.b, 220});
@@ -716,7 +783,7 @@ void Game::drawMenu()
     float pulse = std::sin(m_menuPulse * 2.2f) * 0.5f + 0.5f;
 
     {
-        sf::Text title(m_font, "SPACE INVADERS", 32u);
+        sf::Text title(m_font, "SPACE INVADERS", 46u);
         title.setFillColor({80, 220, 255, 255});
         title.setOutlineColor({0, 60, 120, 255});
         title.setOutlineThickness(3.f);
@@ -724,68 +791,65 @@ void Game::drawMenu()
         title.setOrigin({tb.size.x / 2.f, tb.size.y / 2.f});
         float s = 1.f + pulse * 0.03f;
         title.setScale({s, s});
-        title.setPosition({cx, 160.f});
+        title.setPosition({cx, 155.f});
         m_window.draw(title);
     }
 
     {
         const float btnW = 220.f, btnH = 52.f;
-        const float btnY = 270.f;
+        const float btnY = 268.f;
         m_playButtonRect = {{cx - btnW / 2.f, btnY}, {btnW, btnH}};
 
         sf::Vector2i mp = sf::Mouse::getPosition(m_window);
-        bool hovered = m_playButtonRect.contains(sf::Vector2f{float(mp.x), float(mp.y)});
+        bool hovered = m_playButtonRect.contains(
+            sf::Vector2f{float(mp.x), float(mp.y)});
 
-        sf::RectangleShape btn({btnW, btnH});
+        RoundedRectShape btn({btnW, btnH}, 10.f);
         btn.setPosition({cx - btnW / 2.f, btnY});
-        btn.setFillColor(hovered
-                             ? sf::Color{40, 160, 255, 220}
-                             : sf::Color{20, 80, 180, 180});
-        btn.setOutlineColor(hovered
-                                ? sf::Color{120, 220, 255, 255}
-                                : sf::Color{60, 140, 255, 200});
+        btn.setFillColor(hovered ? sf::Color{40, 160, 255, 220}
+                                 : sf::Color{20, 80, 180, 180});
+        btn.setOutlineColor(hovered ? sf::Color{120, 220, 255, 255}
+                                    : sf::Color{60, 140, 255, 200});
         btn.setOutlineThickness(2.f);
         m_window.draw(btn);
 
-        sf::RectangleShape shine({btnW - 4.f, 6.f});
-        shine.setPosition({cx - btnW / 2.f + 2.f, btnY + 2.f});
+        sf::RectangleShape shine({btnW - 20.f, 6.f});
+        shine.setPosition({cx - (btnW - 20.f) / 2.f, btnY + 4.f});
         shine.setFillColor({255, 255, 255, hovered ? 50u : 25u});
         m_window.draw(shine);
 
-        sf::Text playTxt(m_font, "PLAY", 22u);
+        sf::Text playTxt(m_font, "PLAY", 26u);
         playTxt.setFillColor({255, 255, 255, 255});
         playTxt.setOutlineColor({0, 40, 100, 200});
         playTxt.setOutlineThickness(2.f);
         auto pb = playTxt.getLocalBounds();
         playTxt.setOrigin({pb.size.x / 2.f, pb.size.y / 2.f});
-        playTxt.setPosition({cx, btnY + btnH / 2.f - 6.f});
+        playTxt.setPosition({cx, btnY + btnH / 2.f - 5.f});
         m_window.draw(playTxt);
     }
 
     {
-        const float panelW = 380.f;
+        const float panelW = 390.f;
         const float panelX = cx - panelW / 2.f;
-        const float panelY = 350.f;
-
+        const float panelY = 346.f;
         const float BTN_H = 32.f;
         const float BTN_W = 34.f;
         const float BTN_SPACE_W = 68.f;
-        const float ROW_GAP = 14.f;
+        const float ROW_GAP = 16.f;
         const float ICON_W = 24.f;
         const float OR_W = 22.f;
         const float COL_GAP = 8.f;
-
-        const float headerH = 38.f;
+        const float headerH = 42.f;
         const float panelH = headerH + BTN_H * 3.f + ROW_GAP * 2.f + 40.f;
 
-        sf::RectangleShape panel({panelW, panelH});
+        RoundedRectShape panel({panelW, panelH}, 8.f);
         panel.setPosition({panelX, panelY});
         panel.setFillColor({10, 10, 40, 160});
         panel.setOutlineColor({60, 100, 200, 120});
         panel.setOutlineThickness(1.f);
         m_window.draw(panel);
 
-        sf::Text ctrlTitle(m_font, "CONTROLS", 16u);
+        sf::Text ctrlTitle(m_font, "CONTROLS", 18u);
         ctrlTitle.setFillColor({150, 200, 255, 200});
         auto ctb = ctrlTitle.getLocalBounds();
         ctrlTitle.setOrigin({ctb.size.x / 2.f, 0.f});
@@ -793,32 +857,32 @@ void Game::drawMenu()
         m_window.draw(ctrlTitle);
 
         sf::RectangleShape sep({panelW - 20.f, 1.f});
-        sep.setPosition({panelX + 10.f, panelY + 38.f});
+        sep.setPosition({panelX + 10.f, panelY + headerH});
         sep.setFillColor({60, 100, 200, 100});
         m_window.draw(sep);
 
-        auto drawKey = [&](const std::string &label, float kx, float ky,
+        auto drawKey = [&](const std::string &lbl, float kx, float ky,
                            float kw = -1.f)
         {
             float w = (kw < 0.f) ? BTN_W : kw;
-            sf::RectangleShape key({w, BTN_H});
+
+            RoundedRectShape key({w, BTN_H}, 5.f);
             key.setPosition({kx, ky});
             key.setFillColor({30, 50, 100, 200});
             key.setOutlineColor({100, 160, 255, 220});
-            key.setOutlineThickness(0.f);
+            key.setOutlineThickness(1.5f);
             m_window.draw(key);
 
             sf::RectangleShape shadow({w, 3.f});
-            shadow.setPosition({kx, ky + BTN_H});
-            shadow.setFillColor({0, 0, 0, 80});
+            shadow.setPosition({kx, ky + BTN_H + 1.f});
+            shadow.setFillColor({0, 0, 0, 70});
             m_window.draw(shadow);
 
             unsigned fontSize = 14u;
-
-            if (label == "<" || label == ">")
+            if (lbl == "<" || lbl == ">")
                 fontSize = 26u;
 
-            sf::Text kt(m_font, label, fontSize);
+            sf::Text kt(m_font, lbl, fontSize);
             kt.setFillColor({200, 230, 255, 255});
             auto b = kt.getLocalBounds();
             kt.setOrigin({b.position.x + b.size.x * 0.5f,
@@ -829,7 +893,7 @@ void Game::drawMenu()
 
         auto drawOr = [&](float ox, float oy)
         {
-            sf::Text orTxt(m_font, "or", 12u);
+            sf::Text orTxt(m_font, "or", 13u);
             orTxt.setFillColor({140, 160, 200, 180});
             auto b = orTxt.getLocalBounds();
             orTxt.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
@@ -840,7 +904,7 @@ void Game::drawMenu()
         auto drawLabel = [&](const std::string &text, float lx, float ly,
                              sf::Color col = {180, 200, 255, 200})
         {
-            sf::Text lbl(m_font, text, 10u);
+            sf::Text lbl(m_font, text, 13u);
             lbl.setFillColor(col);
             auto b = lbl.getLocalBounds();
             lbl.setOrigin({0.f, b.size.y / 2.f});
@@ -851,8 +915,8 @@ void Game::drawMenu()
         const float row0Y = panelY + headerH + 17.f;
         const float row1Y = row0Y + BTN_H + ROW_GAP + 4.f;
         const float row2Y = row1Y + BTN_H + ROW_GAP + 4.f;
-
         const float lineX = panelX + 20.f;
+        float kx0 = lineX + ICON_W + COL_GAP + 10.f;
 
         {
             sf::Sprite shipIcon(GFX.player);
@@ -862,8 +926,6 @@ void Game::drawMenu()
             shipIcon.setPosition({lineX, row0Y + (BTN_H - isz.y * sc) / 2.f});
             m_window.draw(shipIcon);
         }
-
-        float kx0 = lineX + ICON_W + COL_GAP + 10.f;
         drawKey("A", kx0, row0Y);
         drawKey("D", kx0 + BTN_W + COL_GAP, row0Y);
         drawOr(kx0 + 2 * BTN_W + COL_GAP + 2.f, row0Y - 4.f);
@@ -881,7 +943,6 @@ void Game::drawMenu()
             bulletIcon.setPosition({lineX + ICON_W / 2.f, row1Y + BTN_H / 2.f});
             m_window.draw(bulletIcon);
         }
-
         drawKey("SPACE", kx0, row1Y, BTN_SPACE_W);
         drawOr(kx0 + BTN_SPACE_W + 2.f, row1Y - 2.f);
         drawKey("Z", kx0 + BTN_SPACE_W + OR_W + COL_GAP, row1Y);
@@ -895,31 +956,26 @@ void Game::drawMenu()
         sf::Sprite star(GFX.star);
         star.setScale({0.2f, 0.2f});
 
-        sf::Text hi(m_font, "BEST: " + std::to_string(m_hiScore), 11u);
-        hi.setFillColor({255, 200, 60, 180});
-
+        sf::Text hi(m_font, "BEST: " + std::to_string(m_hiScore), 15u);
+        hi.setFillColor({255, 200, 60});
         auto tb = hi.getLocalBounds();
 
         float totalWidth = 10.f + 2.f + tb.size.x;
-
         float startX = cx - totalWidth / 2.f;
 
-        star.setPosition({startX,
-                          float(Cfg::H) - 48.f});
-
-        hi.setPosition({startX + 14.f,
-                        float(Cfg::H) - 50.f});
+        star.setPosition({startX - 2.f, float(Cfg::H) - 55.f});
+        hi.setPosition({startX + 16.f, float(Cfg::H) - 60.f});
 
         m_window.draw(star);
         m_window.draw(hi);
 
         float alpha = std::sin(m_menuPulse * 3.f) * 0.5f + 0.5f;
         alpha = 160.f + alpha * 95.f;
-        sf::Text hint(m_font, "PRESS ENTER OR SPACE TO START", 10u);
+        sf::Text hint(m_font, "PRESS ENTER OR SPACE TO START", 14u);
         hint.setFillColor({180, 180, 180, static_cast<std::uint8_t>(alpha)});
         auto pb = hint.getLocalBounds();
         hint.setOrigin({pb.size.x / 2.f, pb.size.y / 2.f});
-        hint.setPosition({cx, float(Cfg::H) - 28.f});
+        hint.setPosition({cx, float(Cfg::H) - 26.f});
         m_window.draw(hint);
     }
 }
@@ -930,21 +986,25 @@ void Game::drawPause()
     overlay.setFillColor({0, 0, 20, 160});
     m_window.draw(overlay);
 
-    sf::Text t(m_font, "PAUSED", 30u);
-    t.setFillColor({255, 255, 255, 240});
-    t.setOutlineColor({0, 0, 40, 200});
-    t.setOutlineThickness(2.f);
-    auto b = t.getLocalBounds();
-    t.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-    t.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f - 30.f});
-    m_window.draw(t);
+    const float cx = float(Cfg::W) / 2.f;
+    const float cy = float(Cfg::H) / 2.f;
 
-    sf::Text sub(m_font, "ESC / P  to resume\nM  for menu", 11u);
-    sub.setFillColor({180, 180, 200, 200});
-    auto sb = sub.getLocalBounds();
-    sub.setOrigin({sb.size.x / 2.f, 0.f});
-    sub.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f + 20.f});
-    m_window.draw(sub);
+    sf::Text title(m_font, "PAUSED", 42u);
+    title.setFillColor({255, 255, 255, 240});
+    title.setOutlineColor({0, 0, 40, 200});
+    title.setOutlineThickness(3.f);
+    auto tb = title.getLocalBounds();
+    title.setOrigin({tb.size.x / 2.f, tb.size.y / 2.f});
+    title.setPosition({cx, cy - 80.f});
+    m_window.draw(title);
+
+    sf::RectangleShape sep({220.f, 1.f});
+    sep.setFillColor({80, 120, 255, 80});
+    sep.setPosition({cx - 110.f, cy - 28.f});
+    m_window.draw(sep);
+
+    drawActionRow(cx, cy - 12.f, {"ESC", "P"}, "Resume");
+    drawActionRow(cx, cy + 42.f, {"M"}, "Menu");
 }
 
 void Game::drawGameOver()
@@ -953,80 +1013,79 @@ void Game::drawGameOver()
     overlay.setFillColor({30, 0, 0, 180});
     m_window.draw(overlay);
 
+    const float cx = float(Cfg::W) / 2.f;
+    const float midY = float(Cfg::H) / 2.f;
     float pulse = std::sin(m_menuPulse * 3.f) * 0.5f + 0.5f;
-    sf::Text t(m_font, "GAME OVER", 32u);
+
+    sf::Text t(m_font, "GAME OVER", 46u);
     t.setFillColor({255, static_cast<std::uint8_t>(30 + pulse * 40), 30, 255});
     t.setOutlineColor({100, 0, 0, 255});
     t.setOutlineThickness(3.f);
     auto b = t.getLocalBounds();
     t.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-    t.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f - 60.f});
+    t.setPosition({cx, midY - 110.f});
     m_window.draw(t);
 
     std::ostringstream ss;
     ss << "SCORE: " << std::setw(8) << std::setfill('0') << m_player.getScore();
-    sf::Text sc(m_font, ss.str(), 14u);
+    sf::Text sc(m_font, ss.str(), 20u);
     sc.setFillColor({200, 200, 255, 220});
     auto sb = sc.getLocalBounds();
     sc.setOrigin({sb.size.x / 2.f, sb.size.y / 2.f});
-    sc.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f + 10.f});
+    sc.setPosition({cx, midY - 30.f});
     m_window.draw(sc);
 
     if (m_player.getScore() >= m_hiScore && m_player.getScore() > 0)
     {
-        sf::Text hi(m_font, "NEW HI-SCORE!", 13u);
+        sf::Text hi(m_font, "NEW HI-SCORE!", 18u);
         hi.setFillColor({255, 220, 50, static_cast<std::uint8_t>(180 + pulse * 75)});
         auto hb = hi.getLocalBounds();
         hi.setOrigin({hb.size.x / 2.f, hb.size.y / 2.f});
-        hi.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f + 45.f});
+        hi.setPosition({cx, midY + 12.f});
         m_window.draw(hi);
     }
 
-    sf::Text ctrl(m_font, "R to retry    ENTER / SPACE for menu", 10u);
-    ctrl.setFillColor({180, 180, 180, 200});
-    auto cb = ctrl.getLocalBounds();
-    ctrl.setOrigin({cb.size.x / 2.f, 0.f});
-    ctrl.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f + 90.f});
-    m_window.draw(ctrl);
+    const float actionsY = midY + 65.f;
+    drawActionRow(cx, actionsY, {"R"}, "Retry");
+    drawActionRow(cx, actionsY + 50.f, {"ENTER", "SPACE"}, "Menu");
 }
 
 void Game::drawWin()
 {
     float pulse = std::sin(m_menuPulse * 2.5f) * 0.5f + 0.5f;
+
     sf::RectangleShape overlay({float(Cfg::W), float(Cfg::H)});
     overlay.setFillColor({0, 20, 40, 160});
     m_window.draw(overlay);
 
-    sf::Text t(m_font, "YOU WIN!", 34u);
+    const float cx = float(Cfg::W) / 2.f;
+    const float midY = float(Cfg::H) / 2.f;
+
+    sf::Text t(m_font, "YOU WIN!", 48u);
     std::uint8_t gr = static_cast<std::uint8_t>(80 + pulse * 175);
     t.setFillColor({gr, 255, static_cast<std::uint8_t>(gr / 2), 255});
     t.setOutlineColor({0, 80, 40, 255});
     t.setOutlineThickness(3.f);
     auto b = t.getLocalBounds();
     t.setOrigin({b.size.x / 2.f, b.size.y / 2.f});
-    t.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f - 60.f});
+    t.setPosition({cx, midY - 105.f});
     m_window.draw(t);
 
-    sf::Text sub(m_font, "ALL WAVES CLEARED!", 14u);
+    sf::Text sub(m_font, "ALL WAVES CLEARED!", 20u);
     sub.setFillColor({200, 255, 200, 220});
-    auto sb = sub.getLocalBounds();
-    sub.setOrigin({sb.size.x / 2.f, sb.size.y / 2.f});
-    sub.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f + 10.f});
+    auto subB = sub.getLocalBounds();
+    sub.setOrigin({subB.size.x / 2.f, subB.size.y / 2.f});
+    sub.setPosition({cx, midY - 28.f});
     m_window.draw(sub);
 
     std::ostringstream ss;
     ss << "FINAL SCORE: " << m_player.getScore();
-    sf::Text sc(m_font, ss.str(), 13u);
+    sf::Text sc(m_font, ss.str(), 18u);
     sc.setFillColor({255, 220, 80, 220});
     auto scb = sc.getLocalBounds();
     sc.setOrigin({scb.size.x / 2.f, scb.size.y / 2.f});
-    sc.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f + 55.f});
+    sc.setPosition({cx, midY + 16.f});
     m_window.draw(sc);
 
-    sf::Text ctrl(m_font, "PRESS ENTER FOR MENU", 11u);
-    ctrl.setFillColor({180, 180, 180, static_cast<std::uint8_t>(160 + pulse * 95)});
-    auto cb = ctrl.getLocalBounds();
-    ctrl.setOrigin({cb.size.x / 2.f, 0.f});
-    ctrl.setPosition({float(Cfg::W) / 2.f, float(Cfg::H) / 2.f + 110.f});
-    m_window.draw(ctrl);
+    drawActionRow(cx, midY + 72.f, {"ENTER", "SPACE"}, "Menu");
 }
