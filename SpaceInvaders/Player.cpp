@@ -5,19 +5,23 @@
 #include <algorithm>
 #include <cmath>
 
-void Player::init() {
-    m_pos        = {float(Cfg::W) / 2.f, float(Cfg::H) - 70.f};
-    m_lives      = Cfg::PLAYER_LIVES;
-    m_score      = 0;
+void Player::init()
+{
+    m_pos = {float(Cfg::W) / 2.f, float(Cfg::H) - 70.f};
+    m_lives = Cfg::PLAYER_LIVES;
+    m_score = 0;
     m_shootTimer = 0.f;
     m_invulTimer = 0.f;
     m_blinkTimer = 0.f;
-    m_visible    = true;
+    m_visible = true;
     m_rapidTimer = m_tripleTimer = m_shieldTimer = 0.f;
     m_shieldActive = false;
+    m_rapidActive = false;
+    m_tripleActive = false;
 }
 
-void Player::update(float dt, BulletManager& bullets, ParticleSystem& fx) {
+void Player::update(float dt, BulletManager &bullets, ParticleSystem &fx)
+{
     float speed = Cfg::PLAYER_SPEED;
     auto sz = GFX.player.getSize();
     float halfW = sz.x / 2.f;
@@ -32,36 +36,56 @@ void Player::update(float dt, BulletManager& bullets, ParticleSystem& fx) {
     m_shootTimer -= dt;
     float cd = (m_rapidTimer > 0.f) ? Cfg::PLAYER_SHOOT_CD * 0.35f : Cfg::PLAYER_SHOOT_CD;
     if ((sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) ||
-         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Z)) && m_shootTimer <= 0.f) {
+         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Z)) &&
+        m_shootTimer <= 0.f)
+    {
         m_shootTimer = cd;
         sf::Vector2f muzzle = {m_pos.x, m_pos.y - sz.y / 2.f};
-        if (m_tripleTimer > 0.f) bullets.spawnTriple(muzzle);
-        else                     bullets.spawnPlayer(muzzle);
+        if (m_tripleTimer > 0.f)
+            bullets.spawnTriple(muzzle);
+        else
+            bullets.spawnPlayer(muzzle);
         SFX.play("shoot", 70.f, 0.95f + (float(std::rand() % 10) / 100.f));
     }
-    
-    if (m_lifeNotifTimer > 0.f) {
+
+    if (m_lifeNotifTimer > 0.f)
+    {
         m_lifeNotifTimer -= dt;
         m_lifeNotifAge += dt;
     }
 
-    if (m_rapidTimer  > 0.f) m_rapidTimer  -= dt;
-    if (m_tripleTimer > 0.f) m_tripleTimer -= dt;
-    if (m_shieldTimer > 0.f) { m_shieldTimer -= dt; if (m_shieldTimer <= 0.f) m_shieldActive = false; }
+    if (m_rapidTimer > 0.f)
+        m_rapidTimer -= dt;
+    if (m_rapidTimer <= 0.f)
+        m_rapidActive = false;
+    if (m_tripleTimer > 0.f)
+        m_tripleTimer -= dt;
+    if (m_tripleTimer <= 0.f)
+        m_tripleActive = false;
+    if (m_shieldTimer > 0.f)
+    {
+        m_shieldTimer -= dt;
+        if (m_shieldTimer <= 0.f)
+            m_shieldActive = false;
+    }
 
-    if (m_invulTimer > 0.f) {
+    if (m_invulTimer > 0.f)
+    {
         m_invulTimer -= dt;
         m_blinkTimer += dt;
         m_visible = (m_blinkTimer >= Cfg::PLAYER_BLINK)
-            ? (m_blinkTimer = 0.f, !m_visible) : m_visible;
-    } else {
+                        ? (m_blinkTimer = 0.f, !m_visible)
+                        : m_visible;
+    }
+    else
+    {
         m_visible = true;
     }
 
     m_thrustPhase += dt * 12.f;
 }
 
-DamageResult Player::takeDamage(ParticleSystem& fx)
+DamageResult Player::takeDamage(ParticleSystem &fx)
 {
     if (m_invulTimer > 0.f || m_shieldActive)
         return DamageResult::Ignored;
@@ -80,28 +104,43 @@ DamageResult Player::takeDamage(ParticleSystem& fx)
     return DamageResult::Damaged;
 }
 
-void Player::applyPowerup(PowerupType pu) {
-    SFX.play("powerup", 80.f); 
-    switch (pu) {
-        case PowerupType::Rapid:  m_rapidTimer  = Cfg::POWERUP_DURATION; break;
-        case PowerupType::Triple: m_tripleTimer = Cfg::POWERUP_DURATION; break;
-        case PowerupType::Shield: m_shieldActive = true; m_shieldTimer = Cfg::POWERUP_DURATION; break;
-        default: break;
+void Player::applyPowerup(PowerupType pu)
+{
+    SFX.play("powerup", 80.f);
+    switch (pu)
+    {
+    case PowerupType::Rapid:
+        m_rapidActive = true;
+        m_rapidTimer = Cfg::POWERUP_DURATION;
+        break;
+    case PowerupType::Triple:
+        m_tripleActive = true, m_tripleTimer = Cfg::POWERUP_DURATION;
+        break;
+    case PowerupType::Shield:
+        m_shieldActive = true;
+        m_shieldTimer = Cfg::POWERUP_DURATION;
+        break;
+    default:
+        break;
     }
 }
 
-sf::FloatRect Player::getBounds() const {
+sf::FloatRect Player::getBounds() const
+{
     auto sz = GFX.player.getSize();
-    return { {m_pos.x - sz.x / 2.f, m_pos.y - sz.y / 2.f}, {float(sz.x), float(sz.y)} };
+    return {{m_pos.x - sz.x / 2.f, m_pos.y - sz.y / 2.f}, {float(sz.x), float(sz.y)}};
 }
 
-void Player::draw(sf::RenderTarget& rt) const {
-    if (!m_visible) return;
+void Player::draw(sf::RenderTarget &rt) const
+{
+    if (!m_visible)
+        return;
 
     float flameH = 8.f + std::sin(m_thrustPhase) * 5.f;
     auto sz = GFX.player.getSize();
 
-    auto drawFlame = [&](float offsetX) {
+    auto drawFlame = [&](float offsetX)
+    {
         sf::RectangleShape flame({4.f, flameH});
         flame.setOrigin({2.f, 0.f});
         flame.setPosition({m_pos.x + offsetX, m_pos.y + sz.y / 2.f - 4.f});
@@ -114,17 +153,86 @@ void Player::draw(sf::RenderTarget& rt) const {
         core.setFillColor({255, 255, 200, 230});
         rt.draw(core);
     };
+
     drawFlame(-4.f);
-    drawFlame( 4.f);
+    drawFlame(4.f);
     drawFlame(-18.f);
-    drawFlame( 18.f);
+    drawFlame(18.f);
 
     sf::Sprite spr(GFX.player);
-    spr.setOrigin({sz.x/2.f, sz.y/2.f});
+    spr.setOrigin({sz.x / 2.f, sz.y / 2.f});
     spr.setPosition(m_pos);
     rt.draw(spr);
 
-    if (m_shieldActive) {
+    if (m_tripleActive)
+    {
+        float pulse = std::sin(m_thrustPhase * 2.f) * 0.5f + 0.5f;
+
+        sf::RectangleShape sideGun({4.f, 12.f});
+        sideGun.setOrigin({2.f, 6.f});
+        sideGun.setFillColor({80,
+                              255,
+                              220,
+                              static_cast<std::uint8_t>(170 + pulse * 80)});
+
+        sideGun.setPosition({m_pos.x - sz.x * 0.35f,
+                             m_pos.y - 2.f});
+        rt.draw(sideGun);
+
+        sideGun.setPosition({m_pos.x + sz.x * 0.35f,
+                             m_pos.y - 2.f});
+        rt.draw(sideGun);
+
+        sf::CircleShape glow(3.f);
+        glow.setOrigin({3.f, 3.f});
+        glow.setFillColor({120,
+                           255,
+                           255,
+                           static_cast<std::uint8_t>(80 + pulse * 100)});
+
+        glow.setPosition({m_pos.x - sz.x * 0.35f,
+                          m_pos.y - sz.y * 0.35f});
+        rt.draw(glow);
+
+        glow.setPosition({m_pos.x + sz.x * 0.35f,
+                          m_pos.y - sz.y * 0.35f});
+        rt.draw(glow);
+    }
+
+    if (m_rapidActive)
+    {
+        float pulse = std::sin(m_thrustPhase * 8.f) * 0.5f + 0.5f;
+
+        sf::RectangleShape energy({5.f, 8.f});
+        energy.setOrigin({2.5f, 8.f});
+        energy.setFillColor({255,
+                             static_cast<std::uint8_t>(180 + pulse * 70),
+                             40,
+                             static_cast<std::uint8_t>(180 + pulse * 75)});
+
+        energy.setPosition({m_pos.x - 8.f,
+                            m_pos.y - sz.y * 0.45f});
+        rt.draw(energy);
+
+        energy.setPosition({m_pos.x + 8.f,
+                            m_pos.y - sz.y * 0.45f});
+        rt.draw(energy);
+
+        sf::CircleShape flash(2.f);
+        flash.setOrigin({2.f, 2.f});
+        flash.setFillColor({255,
+                            255,
+                            180,
+                            static_cast<std::uint8_t>(120 + pulse * 100)});
+
+        flash.setPosition({m_pos.x,
+                           m_pos.y - sz.y * 0.55f});
+
+        rt.draw(flash);
+    }
+
+    if (m_shieldActive)
+    {
         sf::CircleShape bubble(sz.x * 0.7f);
         bubble.setOrigin({bubble.getRadius(), bubble.getRadius()});
         bubble.setPosition(m_pos);
@@ -136,25 +244,30 @@ void Player::draw(sf::RenderTarget& rt) const {
     }
 }
 
-void Player::addLife() {
+void Player::addLife()
+{
     m_lives++;
     m_lifeNotifTimer = Cfg::LIFE_NOTIF_DURATION;
     m_lifeNotifAge = 0.f;
 }
 
-float Player::lifeNotifAlpha() const {
+float Player::lifeNotifAlpha() const
+{
     constexpr float fadeIn = 0.3f;
     constexpr float fadeOut = 0.5f;
     float t = m_lifeNotifTimer;
     float age = Cfg::LIFE_NOTIF_DURATION - t;
 
     float alpha = 1.f;
-    if (age < fadeIn)  alpha = age / fadeIn;
-    if (t < fadeOut) alpha = t / fadeOut;
+    if (age < fadeIn)
+        alpha = age / fadeIn;
+    if (t < fadeOut)
+        alpha = t / fadeOut;
     return std::clamp(alpha, 0.f, 1.f) * 255.f;
 }
 
-sf::Vector2f Player::lifeNotifPos() const {
+sf::Vector2f Player::lifeNotifPos() const
+{
     float age = Cfg::LIFE_NOTIF_DURATION - m_lifeNotifTimer;
-    return { m_pos.x, m_pos.y - 30.f - age * Cfg::LIFE_NOTIF_RISE };
+    return {m_pos.x, m_pos.y - 30.f - age * Cfg::LIFE_NOTIF_RISE};
 }

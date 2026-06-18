@@ -14,39 +14,48 @@
 #include "RoundedRectShape.h"
 #include <optional>
 
-enum class GameState { Menu, Countdown, Playing, Paused, GameOver, Win };
+enum class GameState
+{
+    Menu,
+    Countdown,
+    Playing,
+    Paused,
+    GameOver,
+    Win
+};
 
-class Game {
+class Game
+{
 public:
     Game();
     void run();
 
 private:
     sf::RenderWindow m_window;
-    sf::Font         m_font;
-    sf::Clock        m_clock;
-    GameState        m_state = GameState::Menu;
-    int              m_wave  = 1;
-    int              m_hiScore = 0;
+    sf::Font m_font;
+    sf::Clock m_clock;
+    GameState m_state = GameState::Menu;
+    int m_wave = 1;
+    int m_hiScore = 0;
 
-    Background     m_bg;
-    ShieldManager  m_shields;
-    BulletManager  m_bullets;
-    EnemyManager   m_enemies;
-    Player         m_player;
+    Background m_bg;
+    ShieldManager m_shields;
+    BulletManager m_bullets;
+    EnemyManager m_enemies;
+    Player m_player;
     ParticleSystem m_fx;
 
-    float     m_shakeTimer  = 0.f;
-    float     m_shakeMag    = 0.f;
-    float     m_flashTimer  = 0.f;
-    sf::Color m_flashCol    = sf::Color::Transparent;
-    float     m_bgScrollSpd = 1.f;
+    float m_shakeTimer = 0.f;
+    float m_shakeMag = 0.f;
+    float m_flashTimer = 0.f;
+    sf::Color m_flashCol = sf::Color::Transparent;
+    float m_bgScrollSpd = 1.f;
 
-    float m_comboTimer    = 0.f;
-    int   m_combo         = 0;
+    float m_comboTimer = 0.f;
+    int m_combo = 0;
     float m_waveTextTimer = 0.f;
 
-    float         m_menuPulse       = 0.f;
+    float m_menuPulse = 0.f;
     sf::FloatRect m_playButtonRect{};
 
     float m_countdownTimer = 0.f;
@@ -70,8 +79,8 @@ private:
     void drawCountdown();
 
     void drawActionRow(float cx, float y,
-                       const std::vector<std::string>& keys,
-                       const std::string& desc,
+                       const std::vector<std::string> &keys,
+                       const std::string &desc,
                        unsigned descFontSize = 17u);
 
     void checkPlayerBulletVsShields();

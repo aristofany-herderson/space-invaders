@@ -393,9 +393,9 @@ void Game::render()
         break;
 
     case GameState::Countdown:
-        m_shields.draw(m_window);
-        m_enemies.draw(m_window);
-        m_enemies.drawUFO(m_window);
+        // m_shields.draw(m_window);
+        // m_enemies.draw(m_window);
+        // m_enemies.drawUFO(m_window);
         m_player.draw(m_window);
         m_fx.draw(m_window, m_font);
         drawHUD();
@@ -715,7 +715,7 @@ void Game::drawPowerupHUD()
         return;
 
     const float iconSz = 22.f;
-    const float barW = 70.f;
+    const float barW = 60.f;
     const float barH = 6.f;
     const float padX = 10.f;
     const float padY = 8.f;
@@ -730,7 +730,7 @@ void Game::drawPowerupHUD()
         const auto &s = slots[i];
         float y = baseY + float(i) * (slotH + gap);
 
-        RoundedRectShape bg({iconSz + barW + 30.f, slotH - 2.f}, 4.f);
+        RoundedRectShape bg({iconSz + barW + 38.f, slotH - 2.f}, 4.f);
         bg.setPosition({padX - 4.f, y});
         bg.setFillColor({10, 10, 30, 160});
         bg.setOutlineColor({s.barCol.r, s.barCol.g, s.barCol.b, 80});
@@ -741,15 +741,15 @@ void Game::drawPowerupHUD()
         auto tsz = s.tex->getSize();
         float scale = iconSz / float(std::max(tsz.x, tsz.y));
         spr.setScale({scale, scale});
-        spr.setPosition({padX, y + (slotH - iconSz) / 2.f});
+        spr.setPosition({padX, y + (slotH - iconSz) / 2.f - 1.f});
         m_window.draw(spr);
 
         float ratio = std::min(1.f, s.timer / Cfg::POWERUP_DURATION);
         float filledW = barW * ratio;
         float barX = padX + iconSz + 6.f;
-        float barY = y + (slotH - barH) / 2.f + 2.f;
+        float barY = y + (slotH - barH) / 2.f - 1.f;
 
-        sf::RectangleShape track({barW, barH});
+        RoundedRectShape track({barW, barH}, barH * 0.5f);
         track.setPosition({barX, barY});
         track.setFillColor({30, 30, 60, 200});
         track.setOutlineColor({60, 60, 100, 150});
@@ -759,11 +759,16 @@ void Game::drawPowerupHUD()
         bool blink = (s.timer < 3.f && std::fmod(s.timer, 0.4f) < 0.2f);
         if (!blink && filledW > 0.f)
         {
-            sf::RectangleShape fill({filledW, barH});
+            RoundedRectShape fill(
+                {filledW, barH},
+                std::min(barH * 0.5f, filledW * 0.5f));
+
             fill.setPosition({barX, barY});
+
             sf::Color fc = s.barCol;
             fc.a = static_cast<std::uint8_t>(180 + ratio * 75);
             fill.setFillColor(fc);
+
             m_window.draw(fill);
         }
 
@@ -772,7 +777,7 @@ void Game::drawPowerupHUD()
         timeText.setFillColor(s.timer < 3.f
                                   ? sf::Color{255, 80, 80, 255}
                                   : sf::Color{s.barCol.r, s.barCol.g, s.barCol.b, 220});
-        timeText.setPosition({barX + barW + 4.f, barY - 2.f});
+        timeText.setPosition({barX + barW + 8.f, barY - 6.f});
         m_window.draw(timeText);
     }
 }

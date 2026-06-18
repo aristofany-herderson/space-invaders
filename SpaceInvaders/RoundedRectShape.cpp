@@ -4,18 +4,15 @@
 
 static constexpr float kPi = 3.14159265358979323846f;
 
-
 float RoundedRectShape::clampRadius(float r, sf::Vector2f sz)
 {
     return std::min(r, std::min(sz.x, sz.y) * 0.5f);
 }
 
 RoundedRectShape::RoundedRectShape(sf::Vector2f size,
-    float        radius,
-    std::size_t  cornerPoints)
-    : m_size(size)
-    , m_radius(clampRadius(radius, size))
-    , m_points(std::max(cornerPoints, std::size_t(2)))
+                                   float radius,
+                                   std::size_t cornerPoints)
+    : m_size(size), m_radius(clampRadius(radius, size)), m_points(std::max(cornerPoints, std::size_t(2)))
 {
     rebuild();
 }
@@ -46,14 +43,16 @@ std::size_t RoundedRectShape::getPointCount() const
 
 sf::Vector2f RoundedRectShape::getPoint(std::size_t index) const
 {
-    struct Corner { float cx, cy, startDeg; };
+    struct Corner
+    {
+        float cx, cy, startDeg;
+    };
 
     const Corner corners[4] = {
-        { m_radius,            m_radius,            180.f },
-        { m_size.x - m_radius, m_radius,            270.f },
-        { m_size.x - m_radius, m_size.y - m_radius,   0.f },
-        { m_radius,            m_size.y - m_radius,  90.f }
-    };
+        {m_radius, m_radius, 180.f},
+        {m_size.x - m_radius, m_radius, 270.f},
+        {m_size.x - m_radius, m_size.y - m_radius, 0.f},
+        {m_radius, m_size.y - m_radius, 90.f}};
 
     const std::size_t corner = index / m_points;
     const std::size_t i = index % m_points;
@@ -63,8 +62,7 @@ sf::Vector2f RoundedRectShape::getPoint(std::size_t index) const
 
     return {
         corners[corner].cx + std::cos(angle) * m_radius,
-        corners[corner].cy + std::sin(angle) * m_radius
-    };
+        corners[corner].cy + std::sin(angle) * m_radius};
 }
 
 void RoundedRectShape::rebuild()

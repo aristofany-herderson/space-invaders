@@ -5,18 +5,21 @@ SoundManager::SoundManager()
 {
     auto dummy = sf::SoundBuffer();
 
-    for (int i = 0; i < 32; ++i) {
+    for (int i = 0; i < 32; ++i)
+    {
         m_pool.emplace_back(dummy);
     }
 }
-void SoundManager::loadAll() {
+void SoundManager::loadAll()
+{
     const std::string dir = "assets/sounds/";
-    for (const auto& name : {
-            "shoot", "enemy_shoot",
-            "explosion", "explosion_big",
-            "hit", "shield_hit", "player_hit",
-            "powerup", "ufo_loop",
-            "wave_start", "game_over", "win" }) {
+    for (const auto &name : {
+             "shoot", "enemy_shoot",
+             "explosion", "explosion_big",
+             "hit", "shield_hit", "player_hit",
+             "powerup", "ufo_loop",
+             "wave_start", "game_over", "win"})
+    {
         sf::SoundBuffer buf;
         std::string path = dir + name + ".wav";
         if (buf.loadFromFile(path))
@@ -27,7 +30,7 @@ void SoundManager::loadAll() {
 }
 
 void SoundManager::play(
-    const std::string& name,
+    const std::string &name,
     float vol,
     float pitch)
 {
@@ -36,15 +39,14 @@ void SoundManager::play(
     if (it == m_buffers.end())
         return;
 
-    auto& s = m_pool[m_nextVoice];
+    auto &s = m_pool[m_nextVoice];
 
     s.stop();
 
     s.setBuffer(it->second);
 
     s.setVolume(
-        vol * masterVolume / 100.f
-    );
+        vol * masterVolume / 100.f);
 
     s.setPitch(pitch);
 
@@ -56,13 +58,15 @@ void SoundManager::play(
         m_nextVoice = 0;
 }
 
-void SoundManager::startLoop(const std::string& name, float vol) {
+void SoundManager::startLoop(const std::string &name, float vol)
+{
     if (m_loopName == name && m_loopSound &&
         m_loopSound->getStatus() == sf::Sound::Status::Playing)
         return;
 
     auto it = m_buffers.find(name);
-    if (it == m_buffers.end()) return;
+    if (it == m_buffers.end())
+        return;
 
     m_loopSound = std::make_unique<sf::Sound>(it->second);
     m_loopSound->setVolume(vol * masterVolume / 100.f);
@@ -71,12 +75,17 @@ void SoundManager::startLoop(const std::string& name, float vol) {
     m_loopName = name;
 }
 
-void SoundManager::stopLoop() {
-    if (m_loopSound) { m_loopSound->stop(); m_loopSound.reset(); }
+void SoundManager::stopLoop()
+{
+    if (m_loopSound)
+    {
+        m_loopSound->stop();
+        m_loopSound.reset();
+    }
     m_loopName.clear();
 }
 
-void SoundManager::startMusic(const std::string& file, float vol)
+void SoundManager::startMusic(const std::string &file, float vol)
 {
     if (!m_music)
         m_music = std::make_unique<sf::Music>();
@@ -84,7 +93,7 @@ void SoundManager::startMusic(const std::string& file, float vol)
     if (!m_music->openFromFile(file))
     {
         std::cerr << "[Music] nao encontrado: "
-            << file << "\n";
+                  << file << "\n";
         return;
     }
 

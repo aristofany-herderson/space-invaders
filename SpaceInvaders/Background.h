@@ -3,35 +3,37 @@
 #include <vector>
 #include <array>
 
-struct Star {
+struct Star
+{
     sf::Vector2f pos;
-    float        speed;
-    float        brightness;
-    float        size;
+    float speed;
+    float brightness;
+    float size;
 };
 
-class Background {
+class Background
+{
 public:
     Background();
 
     void update(float dt, float shakeX = 0.f, float shakeY = 0.f);
-    void draw(sf::RenderTarget& rt) const;
+    void draw(sf::RenderTarget &rt) const;
     void setScrollSpeed(float s) { m_scrollMul = s; }
 
 private:
     void rebuildVerts();
 
-    std::vector<Star>           m_stars;
-    sf::VertexBuffer            m_starBuffer{ sf::PrimitiveType::Triangles,
-                                              sf::VertexBuffer::Usage::Stream };
-    std::vector<sf::Vertex>     m_starVertsCpu;
+    std::vector<Star> m_stars;
+    sf::VertexBuffer m_starBuffer{sf::PrimitiveType::Triangles,
+                                  sf::VertexBuffer::Usage::Stream};
+    std::vector<sf::Vertex> m_starVertsCpu;
 
-    std::array<float, 3>        m_nebRadii{};
-    float                       m_nebulaX = 0.f;
-    float                       m_scrollMul = 1.f;
+    std::array<float, 3> m_nebRadii{};
+    float m_nebulaX = 0.f;
+    float m_scrollMul = 1.f;
 
-    bool                        m_vertsDirty = true;
+    bool m_vertsDirty = true;
 
-    sf::RectangleShape          m_bgRect;
+    sf::RectangleShape m_bgRect;
     mutable std::array<sf::CircleShape, 3> m_nebCircles;
 };
