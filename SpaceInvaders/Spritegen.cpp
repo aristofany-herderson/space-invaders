@@ -359,4 +359,5 @@ void TextureBank::generate()
         powerupShield = makePowerup({100, 150, 255, 255}, "S");
 
     tryLoad(volumeIcon, dir + "volume.png");
+    tryLoad(pauseIcon, dir + "pause.png");
 }

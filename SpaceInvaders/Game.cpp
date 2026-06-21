@@ -234,6 +234,19 @@ void Game::processEvents()
             }
         }
 
+        if (m_state == GameState::Playing)
+        {
+            if (const auto *mb = ev->getIf<sf::Event::MouseButtonPressed>())
+            {
+                if (mb->button == sf::Mouse::Button::Left)
+                {
+                    sf::Vector2f mp{float(mb->position.x), float(mb->position.y)};
+                    if (m_pauseButtonRect.contains(mp))
+                        m_state = GameState::Paused;
+                }
+            }
+        }
+
         if (m_state == GameState::Menu)
         {
             if (const auto *mb = ev->getIf<sf::Event::MouseButtonPressed>())
@@ -257,7 +270,7 @@ void Game::processEvents()
                     if (m_volTrackRect.contains(mp))
                     {
                         m_volumeDragging = true;
-
+                        // Atualiza volume imediatamente no clique
                         float ratio = std::clamp(
                             (mp.x - m_volTrackRect.position.x) / m_volTrackRect.size.x,
                             0.f, 1.f);
@@ -756,6 +769,7 @@ void Game::drawHUD()
     }
 
     drawLives();
+    drawPauseButton();
 
     if (m_player.hasLifeNotif())
     {
@@ -805,6 +819,38 @@ void Game::drawHUD()
         t.setPosition({float(Cfg::W) / 2.f, Cfg::HUD_HEIGHT + 30.f});
         m_window.draw(t);
     }
+}
+
+void Game::drawPauseButton()
+{
+    if (m_state != GameState::Playing)
+        return;
+
+    constexpr float btnRadius = 16.f;
+    constexpr float iconSz = 20.f;
+    const sf::Vector2f center{float(Cfg::W) / 2.f, Cfg::H - 22.f};
+
+    sf::CircleShape bg(btnRadius);
+    bg.setOrigin({btnRadius, btnRadius});
+    bg.setPosition(center);
+    bg.setFillColor({20, 20, 45, 200});
+    bg.setOutlineColor({80, 150, 255, 160});
+    bg.setOutlineThickness(1.5f);
+    m_window.draw(bg);
+
+    auto isz = GFX.pauseIcon.getSize();
+    if (isz.x > 0 && isz.y > 0)
+    {
+        sf::Sprite icon(GFX.pauseIcon);
+        float sc = iconSz / float(std::max(isz.x, isz.y));
+        icon.setScale({sc, sc});
+        icon.setOrigin({isz.x / 2.f, isz.y / 2.f});
+        icon.setPosition(center);
+        m_window.draw(icon);
+    }
+
+    m_pauseButtonRect = {{center.x - btnRadius, center.y - btnRadius},
+                         {btnRadius * 2.f, btnRadius * 2.f}};
 }
 
 void Game::drawLives()

@@ -65,6 +65,7 @@ private:
 
     float m_menuPulse = 0.f;
     sf::FloatRect m_playButtonRect{};
+    sf::FloatRect m_pauseButtonRect{};
 
     float m_countdownTimer = 0.f;
 
@@ -78,6 +79,7 @@ private:
     void triggerFlash(sf::Color col, float dur = Cfg::FLASH_DUR);
 
     void drawHUD();
+    void drawPauseButton();
     void drawMenu();
     void drawPause();
     void drawGameOver();
