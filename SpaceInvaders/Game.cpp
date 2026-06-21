@@ -140,12 +140,12 @@ void Game::startGame()
     m_countdownTimer = 4.0f;
     m_bgScrollSpd = 1.f;
 
-    SFX.play("wave_start", 85.f);
+    SFX.play(SoundId::WaveStart, 85.f);
 }
 
 void Game::nextWave()
 {
-    SFX.stopLoop();
+    m_enemies.stopUFOLoop();
 
     m_wave++;
     m_shields.reset();
@@ -155,12 +155,12 @@ void Game::nextWave()
 
     m_bgScrollSpd = 1.f + m_wave * 0.15f;
     triggerFlash({80, 180, 255, 180}, 0.4f);
-    SFX.play("wave_start", 85.f);
+    SFX.play(SoundId::WaveStart, 85.f);
     m_state = GameState::Countdown;
     m_countdownTimer = 4.0f;
 
     m_player.addLife();
-    SFX.play("powerup", 90.f);
+    SFX.play(SoundId::Powerup, 90.f);
 }
 
 void Game::triggerShake(float mag, float dur)
@@ -257,7 +257,7 @@ void Game::processEvents()
                     if (m_volTrackRect.contains(mp))
                     {
                         m_volumeDragging = true;
-                        // Atualiza volume imediatamente no clique
+
                         float ratio = std::clamp(
                             (mp.x - m_volTrackRect.position.x) / m_volTrackRect.size.x,
                             0.f, 1.f);
@@ -348,29 +348,29 @@ void Game::update(float dt)
                 m_player.addScore(finalScore);
                 m_fx.addFloatingScore(pos, finalScore, col);
             }
-            SFX.play("explosion", 75.f, 0.9f + (std::rand() % 200) / 1000.f);
+            SFX.play(SoundId::Explosion, 75.f, 0.9f + (std::rand() % 200) / 1000.f);
             triggerShake(3.f, 0.15f); }, [this](sf::Vector2f pos)
                      {
-            if (m_player.hasShield()) {
-                triggerShake(4.f, 0.2f);
-                triggerFlash({ 100, 180, 255, 120 }, 0.25f);
-                SFX.play("shield_hit", 80.f);
-                return;
-            }
-            auto result = m_player.takeDamage(m_fx);
-            if (result != DamageResult::Ignored) {
-                triggerShake(10.f, 0.4f);
-                triggerFlash({ 255, 80, 20, 200 }, 0.5f);
-                SFX.play("explosion", 90.f, 0.7f);
-            }
-            if (result == DamageResult::Dead) {
-                saveHighScore();
-                m_state = GameState::GameOver;
-                SFX.play("game_over", 90.f);
-                SFX.stopLoop();
-                triggerShake(20.f, 1.f);
-                triggerFlash({ 255, 30, 30, 200 }, 0.6f);
-            } });
+                    if (m_player.hasShield()) {
+                        triggerShake(4.f, 0.2f);
+                        triggerFlash({ 100, 180, 255, 120 }, 0.25f);
+                        SFX.play(SoundId::ShieldHit, 80.f);
+                        return;
+                    }
+                    auto result = m_player.takeDamage(m_fx);
+                    if (result != DamageResult::Ignored) {
+                        triggerShake(10.f, 0.4f);
+                        triggerFlash({ 255, 80, 20, 200 }, 0.5f);
+                        SFX.play(SoundId::Explosion, 90.f, 0.7f);
+                    }
+                    if (result == DamageResult::Dead) {
+                        saveHighScore();
+                        m_state = GameState::GameOver;
+                        SFX.play(SoundId::GameOver, 90.f);
+                        m_enemies.stopUFOLoop();
+                        triggerShake(20.f, 1.f);
+                        triggerFlash({ 255, 30, 30, 200 }, 0.6f);
+                    } });
 
     m_bullets.update(dt);
 
@@ -390,8 +390,8 @@ void Game::update(float dt)
     {
         saveHighScore();
         m_state = GameState::GameOver;
-        SFX.play("game_over", 90.f);
-        SFX.stopLoop();
+        SFX.play(SoundId::GameOver, 90.f);
+        m_enemies.stopUFOLoop();
         triggerShake(20.f, 1.f);
         triggerFlash({255, 30, 30, 200}, 0.6f);
     }
@@ -401,8 +401,8 @@ void Game::update(float dt)
         {
             saveHighScore();
             m_state = GameState::Win;
-            SFX.stopLoop();
-            SFX.play("win", 90.f);
+            m_enemies.stopUFOLoop();
+            SFX.play(SoundId::Win, 90.f);
         }
         else
         {
@@ -421,6 +421,10 @@ void Game::update(float dt)
         {
             saveHighScore();
             m_state = GameState::GameOver;
+            SFX.play(SoundId::GameOver, 90.f);
+            m_enemies.stopUFOLoop();
+            triggerShake(20.f, 1.f);
+            triggerFlash({255, 30, 30, 200}, 0.6f);
         }
     }
 }
@@ -434,7 +438,7 @@ void Game::checkPlayerBulletVsShields()
         if (m_shields.checkBulletHit(b.pos))
         {
             b.alive = false;
-            SFX.play("shield_hit", 50.f);
+            SFX.play(SoundId::ShieldHit, 50.f);
         }
     }
 }
@@ -448,7 +452,7 @@ void Game::checkEnemyBulletVsShields()
         if (m_shields.checkBulletHit(b.pos))
         {
             b.alive = false;
-            SFX.play("shield_hit", 60.f);
+            SFX.play(SoundId::ShieldHit, 60.f);
         }
     }
 }

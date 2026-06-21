@@ -207,7 +207,7 @@ void EnemyManager::tryEnemyShoot(Enemy &e, BulletManager &bullets, float dt)
     sf::Color col = colFor(e.type);
 
     bullets.spawnEnemy(e.pos, col);
-    SFX.play("enemy_shoot", 55.f, 0.85f + rnd(0.f, 0.30f));
+    SFX.play(SoundId::EnemyShoot, 55.f, 0.85f + rnd(0.f, 0.30f));
 
     if (e.type == EnemyType::Elite)
     {
@@ -380,7 +380,7 @@ void EnemyManager::spawnUFO()
     m_ufoDir = (std::rand() % 2) ? 1.f : -1.f;
     m_ufoPos.x = (m_ufoDir > 0) ? -60.f : float(Cfg::W) + 60.f;
     m_ufoPos.y = Cfg::HUD_HEIGHT + 30.f;
-    SFX.startLoop("ufo_loop", 60.f);
+    SFX.startLoop(SoundId::UfoLoop, 60.f);
 }
 
 void EnemyManager::updateUFO(float dt, BulletManager &bullets,
@@ -401,8 +401,7 @@ void EnemyManager::updateUFO(float dt, BulletManager &bullets,
 
     if (m_ufoPos.x < -80.f || m_ufoPos.x > float(Cfg::W) + 80.f)
     {
-        m_ufoAlive = false;
-        SFX.stopLoop();
+        stopUFOLoop();
         return;
     }
 
@@ -416,8 +415,7 @@ void EnemyManager::updateUFO(float dt, BulletManager &bullets,
         if ((dx * dx + dy * dy) < (26.f * 26.f))
         {
             b.alive = false;
-            m_ufoAlive = false;
-            SFX.stopLoop();
+            stopUFOLoop();
             fx.spawnExplosion(m_ufoPos, Cfg::COL_UFO, 50);
             onKill(m_ufoPos, Cfg::COL_UFO, Cfg::UFO_SCORE);
             return;

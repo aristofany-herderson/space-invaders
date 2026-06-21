@@ -45,7 +45,7 @@ void Player::update(float dt, BulletManager &bullets, ParticleSystem &fx)
             bullets.spawnTriple(muzzle);
         else
             bullets.spawnPlayer(muzzle);
-        SFX.play("shoot", 70.f, 0.95f + (float(std::rand() % 10) / 100.f));
+        SFX.play(SoundId::Shoot, 70.f, 0.95f + (float(std::rand() % 10) / 100.f));
     }
 
     if (m_lifeNotifTimer > 0.f)
@@ -91,7 +91,7 @@ DamageResult Player::takeDamage(ParticleSystem &fx)
         return DamageResult::Ignored;
 
     fx.spawnExplosion(m_pos, Cfg::COL_PLAYER, 20);
-    SFX.play("player_hit", 85.f);
+    SFX.play(SoundId::PlayerHit, 85.f);
 
     m_invulTimer = Cfg::PLAYER_INVUL;
     m_blinkTimer = 0.f;
@@ -106,7 +106,7 @@ DamageResult Player::takeDamage(ParticleSystem &fx)
 
 void Player::applyPowerup(PowerupType pu)
 {
-    SFX.play("powerup", 80.f);
+    SFX.play(SoundId::Powerup, 80.f);
     switch (pu)
     {
     case PowerupType::Rapid:
