@@ -1,6 +1,9 @@
 #include "Game.h"
 #include "Constants.h"
 #include "RoundedRectShape.h"
+#include "Exceptions.h"
+#include "Storage.h"
+#include <iostream>
 #include <fstream>
 #include <cmath>
 #include <sstream>
@@ -22,7 +25,7 @@ Game::Game()
         m_window.setIcon(icon);
 
     if (!m_font.openFromFile("assets/fonts/font.ttf"))
-        throw std::runtime_error("Nao foi possivel carregar assets/fonts/font.ttf");
+        throw AssetLoadException("assets/fonts/font.ttf");
 
     loadHighScore();
     loadSettings();
@@ -30,27 +33,44 @@ Game::Game()
 
 void Game::loadSettings()
 {
-    std::ifstream f("settings.dat");
-    if (f.is_open())
+    try
     {
-        f >> m_volume;
-        m_volume = std::clamp(m_volume, 0.f, 100.f);
-        SFX.setMasterVolume(m_volume);
+        m_volume = Storage::readVolume("settings.dat");
     }
+    catch (const GameException &e)
+    {
+        std::cerr << "[Settings] " << e.what() << " - usando volume padrao
+";
+        m_volume = Storage::DEFAULT_VOLUME;
+    }
+    SFX.setMasterVolume(m_volume);
 }
 
 void Game::saveSettings()
 {
-    std::ofstream f("settings.dat");
-    if (f.is_open())
-        f << m_volume;
+    try
+    {
+        Storage::writeVolume("settings.dat", m_volume);
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "[Settings] nao foi possivel salvar: " << e.what() << "
+";
+    }
 }
 
 void Game::loadHighScore()
 {
-    std::ifstream f("hiscore.dat");
-    if (f.is_open())
-        f >> m_hiScore;
+    try
+    {
+        m_hiScore = Storage::readHighScore("hiscore.dat");
+    }
+    catch (const GameException &e)
+    {
+        std::cerr << "[HiScore] " << e.what() << " - recorde reiniciado
+";
+        m_hiScore = 0;
+    }
 }
 
 void Game::saveHighScore()
@@ -58,8 +78,15 @@ void Game::saveHighScore()
     if (m_player.getScore() > m_hiScore)
     {
         m_hiScore = m_player.getScore();
-        std::ofstream f("hiscore.dat");
-        f << m_hiScore;
+        try
+        {
+            Storage::writeHighScore("hiscore.dat", m_hiScore);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "[HiScore] nao foi possivel salvar: " << e.what() << "
+";
+        }
     }
 }
 

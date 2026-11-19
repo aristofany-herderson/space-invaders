@@ -4,4 +4,5 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="SpaceInvaders/SpaceInvaders.vcxproj" Id="e3c04bd8-bdbb-4fe1-b9f1-01a5723cde94" />
+  <Project Path="SpaceInvaders.Tests/SpaceInvaders.Tests.vcxproj" Id="7b1d2f4e-3a5c-4e8a-9c61-2f0d5b8a1e37" />
 </Solution>

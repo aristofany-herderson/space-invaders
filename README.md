@@ -18,47 +18,66 @@
 </p>
 
 <p align="center">
-  👾 A modern Space Invaders clone built with C++ and SFML.
+  👾 Um clone moderno de Space Invaders feito em C++ e SFML, com ranking online.
 </p>
 
 <br/>
 
-# 🧪 Technologies
+# 🎓 Sobre o projeto
 
-This project was developed using:
+Trabalho da disciplina **Linguagem de Programação II**. Partimos de um jogo jogável (power-ups, escudos, efeitos sonoros e recorde em arquivo)
+e o reorganizamos para aplicar os conceitos da disciplina:
 
-- C++
-- SFML 3
+- **Classe abstrata e herança:** `Enemy` com as subclasses `Drone`, `Invader`, `Brute`, `Kamikaze`, `Elite` e `UFO`.
+- **Interface e polimorfismo:** `Damageable`, implementada por `Player`, `Enemy` e `Shield`.
+- **Padrões de projeto:** `EnemyFactory` (Factory) e `SoundManager` (Singleton).
+- **Tratamento de exceções:** hierarquia `GameException` (veja a seção "Tratamento de exceções").
+- **Extras:** GUI (SFML), banco de dados e API REST (libcurl) para o ranking online.
+- **Testes unitários:** Microsoft C++ Unit Test Framework.
+
+**Equipe:** Aristofany Herderson Gomes de Souto Menezes, Leonardo Rosendo Faustino e Mairon Lima de Melo.
+
+| Integrante | Responsabilidade |
+|---|---|
+| Aristofany | base do jogo, hierarquia de inimigos, Factory, revisão dos pull requests |
+| Mairon | banco de dados e API, tela de ranking, entrada do nome do jogador |
+| Leonardo | diagramas UML, testes unitários, tratamento de exceções, README |
+
+<br/>
+
+# 🧪 Tecnologias
+
+- C++20
+- SFML 3 (gráficos, janela e áudio)
 - Visual Studio 2026
+- Microsoft C++ Unit Test Framework (testes)
+- libcurl + API REST (Firebase/Supabase), previsto para o ranking
 
 <br/>
 
-# 📂 Project Structure
+# 📂 Estrutura do projeto
 
 ```
-assets/
-    fonts/
-    sounds/
-    sprites/
-Background.cpp
-Bullet.cpp
-Enemy.cpp
-Game.cpp
-Particle.cpp
-Player.cpp
-Shield.cpp
-SoundManager.cpp
-Spritegen.cpp
-main.cpp
+SpaceInvaders.slnx               solução do Visual Studio
+SpaceInvaders/                   código do jogo
+    assets/                      fontes, sons e sprites
+    Background, Bullet, Enemy,   entidades e sistemas do jogo
+    Game, Particle, Player,
+    Shield, SoundManager,
+    Spritegen
+    Exceptions.h                 hierarquia de exceções
+    Storage                      leitura/gravação de hiscore.dat e settings.dat
+SpaceInvaders.Tests/             projeto de testes unitários
+docs/
+    uml/                         diagramas de classes e de sequência
+    testes.md                    como configurar e rodar os testes
 ```
-
-The project follows a classic object-oriented architecture where each game entity is encapsulated into its own class.
 
 <br/>
 
-# 🧑🏻‍💻 Getting Started
+# 🧑🏻‍💻 Como executar
 
-Clone the repository:
+Clone o repositório:
 
 ```bash
 git clone https://github.com/aristofany-herderson/space-invaders.git
@@ -66,92 +85,109 @@ git clone https://github.com/aristofany-herderson/space-invaders.git
 cd space-invaders
 ```
 
-Install .dll **SFML 3** files and configure workspace correctly.
+1. Baixe o **SFML 3.1** (Visual C++, 64 bits) e extraia em uma pasta.
+2. Ajuste os diretórios de include e lib do SFML nas propriedades do projeto `SpaceInvaders` (hoje apontam para `C:\Users\arist\source\SFML-3.1.0`).
+3. Copie as DLLs do SFML (`sfml-*-d.dll` no Debug, `sfml-*.dll` no Release) para a pasta do executável.
+4. Abra `SpaceInvaders.slnx` no **Visual Studio 2026**, escolha **x64** e compile/execute.
 
-Open the solution in **Visual Studio 2026**.
-
-Then build and run the project.
-
-<br/>
-
-# 🎮 Project
-
-A classic **Space Invaders** remake featuring modern graphics, sound effects and particle effects while preserving the original arcade gameplay.
-
-The player controls a spaceship and must survive successive waves of enemies while achieving the highest possible score.
+O executável precisa encontrar a pasta `assets/` no diretório de trabalho.
 
 <br/>
 
-# 🚀 Features
+# 🎮 O jogo
 
-- ✅ Multiple enemy types
-- ✅ Animated explosions
-- ✅ Particle effects
-- ✅ Sound effects
-- ✅ Background music
-- ✅ UFO enemy
-- ✅ Player shield system
-- ✅ Multiple power-ups
-- ✅ High Score saving
-- ✅ Progressive difficulty
-- ✅ Modern sprite rendering
-- ✅ Arcade gameplay
+O jogador controla uma nave e deve sobreviver a ondas sucessivas de inimigos, buscando a maior pontuação.
+
+| Ação | Tecla |
+|---|---|
+| Mover | `←` `→` ou `A` `D` |
+| Atirar | `Espaço` ou `Z` |
+| Pausar | `P`, `Esc` ou o botão de pausa no HUD |
 
 <br/>
 
-# 🎨 Assets
+# 🚀 Funcionalidades
 
-The project includes:
-
-- Pixel-art sprites
-- Sound effects
-- Background music
-- Custom font
-
-All assets are stored inside the `assets/` directory.
-
-<br/>
-
-# 🧠 Project Architecture
-
-The game is organized into independent modules:
-
-- **Game** → Main game loop and state management
-- **Player** → Player movement and shooting
-- **Enemy** → Enemy AI and behaviors
-- **Bullet** → Projectile system
-- **Shield** → Shield mechanics
-- **Particle** → Explosion and visual effects
-- **Background** → Animated background
-- **SoundManager** → Audio management
-- **Spritegen** → Sprite loading and management
-
-This modular architecture makes the project easy to maintain and extend.
+- ✅ Vários tipos de inimigos
+- ✅ Explosões animadas e partículas
+- ✅ Efeitos sonoros e música de fundo
+- ✅ UFO bônus
+- ✅ Escudos destrutíveis
+- ✅ Power-ups (tiro rápido, tiro triplo, escudo)
+- ✅ Recorde salvo em arquivo
+- ✅ Dificuldade progressiva
+- ✅ Botão de pausa e controle de volume
+- 🚧 Ranking online com atualização automática (em desenvolvimento)
 
 <br/>
 
-# 📸 Screenshots
+# 🧠 Arquitetura
+
+Os diagramas ficam em [`docs/uml/`](docs/uml) e são escritos em Mermaid, então o GitHub os desenha direto na página:
+
+| Diagrama | Conteúdo |
+|---|---|
+| [Classes: versão atual](docs/uml/diagrama-classes-atual.md) | levantamento do código antes da refatoração |
+| [Classes: arquitetura-alvo](docs/uml/diagrama-classes-alvo.md) | `Enemy` abstrata, subclasses, `Damageable`, `EnemyFactory`, ranking, exceções |
+| [Sequência](docs/uml/diagramas-sequencia.md) | quadro de jogo, colisão polimórfica, montagem de onda e envio de pontuação ao ranking |
+
+Módulos principais:
+
+- **Game**: laço principal, estados e colisões
+- **Player**: movimento, tiro, vidas e power-ups
+- **Enemy / EnemyManager**: comportamento e formação dos inimigos
+- **Bullet**: projéteis
+- **Shield**: escudos destrutíveis
+- **Particle / Background**: efeitos visuais
+- **SoundManager**: áudio (Singleton)
+- **Spritegen**: carregamento e geração de sprites
+- **Storage**: persistência local do recorde e do volume
+
+<br/>
+
+# 🛡️ Tratamento de exceções
+
+As falhas previstas usam a hierarquia definida em [`Exceptions.h`](SpaceInvaders/Exceptions.h):
 
 ```
-Coming Soon
+std::runtime_error
+└── GameException
+    ├── AssetLoadException        recurso obrigatório não carregou (ex.: fonte)
+    └── PersistenceException      falha ao ler/gravar arquivo
+        └── InvalidDataException  arquivo existe, mas o conteúdo é inválido
 ```
 
-<br/>
+| Situação | Comportamento |
+|---|---|
+| `hiscore.dat` ou `settings.dat` não existe | usa o valor padrão (primeira execução não é erro) |
+| arquivo corrompido, vazio ou fora da faixa | `InvalidDataException`; o jogo registra no `std::cerr` e usa o valor padrão |
+| não é possível gravar o recorde/volume | `PersistenceException`; o jogo registra o erro e continua |
+| fonte `assets/fonts/font.ttf` ausente | `AssetLoadException`; `main` mostra a mensagem e encerra com código 2 |
+| argumento inválido (pontuação negativa, volume fora de 0–100) | `std::invalid_argument` |
 
-# 📈 Future Improvements
-
-- Boss fights
-- New enemy formations
-- More power-ups
-- Difficulty modes
-- Leaderboards
-- Controller support
-- Settings menu
-- Achievements
+Sprites e sons ausentes não derrubam o jogo: os sprites têm *fallback* procedural e os sons são ignorados.
 
 <br/>
 
-# 🧑🏻 Author
+# ✅ Testes
+
+Projeto [`SpaceInvaders.Tests`](SpaceInvaders.Tests) com o Microsoft C++ Unit Test Framework.
+Para rodar: abra a solução, compile em **x64** e use **Teste → Gerenciador de Testes → Executar Tudo**.
+Passo a passo e lista do que é coberto em [`docs/testes.md`](docs/testes.md).
+
+<br/>
+
+# 📈 Próximos passos
+
+- Hierarquia `Enemy` abstrata e `EnemyFactory`
+- Interface `Damageable` em `Player`, `Enemy` e `Shield`
+- Ranking online (API REST + banco), tela de ranking e entrada do nome
+- Testes das novas classes
+- Modos de dificuldade, controle e conquistas
+
+<br/>
+
+# 🧑🏻 Autor do jogo original
 
 <p align="center">
   <img width="20%" src="https://github.com/aristofany-herderson.png">
@@ -172,11 +208,11 @@ Coming Soon
 
 <br/>
 
-# 📜 License
+# 📜 Licença
 
-This project is distributed under the MIT License.
+Este projeto é distribuído sob a licença MIT.
 
-Feel free to fork, study and improve it.
+Fique à vontade para fazer fork, estudar e melhorar.
 
 <br/>
 
