@@ -156,6 +156,7 @@
     <ClCompile Include="Shield.cpp" />
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="SpaceInvaders.cpp" />
+    <ClCompile Include="Storage.cpp" />
     <ClCompile Include="Spritegen.cpp" />
     <ClCompile Include="Spritegen.h" />
   </ItemGroup>
@@ -163,12 +164,14 @@
     <ClInclude Include="Background.h" />
     <ClInclude Include="Bullet.h" />
     <ClInclude Include="Enemy.h" />
+    <ClInclude Include="Exceptions.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="RoundedRectShape.h" />
     <ClInclude Include="Shield.h" />
     <ClInclude Include="SoundManager.h" />
+    <ClInclude Include="Storage.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
