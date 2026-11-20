@@ -1,6 +1,7 @@
 #include "Shield.h"
 #include "Constants.h"
 #include <cmath>
+#include <utility>
 
 void Shield::init(sf::Vector2f topLeft)
 {
@@ -53,24 +54,62 @@ void Shield::draw(sf::RenderTarget &rt) const
     }
 }
 
-bool Shield::checkBulletHit(sf::Vector2f bulletPos, float bulletRadius)
+const ShieldBlock *Shield::findBlock(sf::Vector2f point, float radius) const
 {
-    for (auto &b : m_blocks)
+    for (const auto &b : m_blocks)
     {
         if (!b.alive)
             continue;
         sf::FloatRect br{b.pos, {m_blockSize, m_blockSize}};
-        if (br.contains(bulletPos) ||
-            std::hypot(bulletPos.x - (b.pos.x + m_blockSize / 2.f),
-                       bulletPos.y - (b.pos.y + m_blockSize / 2.f)) < bulletRadius + m_blockSize / 2.f)
-        {
-            b.hp--;
-            if (b.hp <= 0)
-                b.alive = false;
-            return true;
-        }
+        if (br.contains(point) ||
+            std::hypot(point.x - (b.pos.x + m_blockSize / 2.f),
+                       point.y - (b.pos.y + m_blockSize / 2.f)) < radius + m_blockSize / 2.f)
+            return &b;
     }
+    return nullptr;
+}
+
+ShieldBlock *Shield::findBlock(sf::Vector2f point, float radius)
+{
+    return const_cast<ShieldBlock *>(std::as_const(*this).findBlock(point, radius));
+}
+
+DamageResult Shield::damageBlock(ShieldBlock &block, int amount)
+{
+    block.hp -= amount;
+    if (block.hp <= 0)
+        block.alive = false;
+    return isAlive() ? DamageResult::Damaged : DamageResult::Dead;
+}
+
+bool Shield::checkBulletHit(sf::Vector2f bulletPos, float bulletRadius)
+{
+    ShieldBlock *block = findBlock(bulletPos, bulletRadius);
+    if (!block)
+        return false;
+    damageBlock(*block, 1);
+    return true;
+}
+
+DamageResult Shield::takeDamage(int amount, sf::Vector2f impact)
+{
+    ShieldBlock *block = findBlock(impact, Cfg::BULLET_RADIUS);
+    if (!block || amount <= 0)
+        return DamageResult::Ignored;
+    return damageBlock(*block, amount);
+}
+
+bool Shield::isAlive() const
+{
+    for (const auto &b : m_blocks)
+        if (b.alive)
+            return true;
     return false;
+}
+
+bool Shield::isHitBy(sf::Vector2f point, float radius) const
+{
+    return findBlock(point, radius) != nullptr;
 }
 
 void ShieldManager::init()
