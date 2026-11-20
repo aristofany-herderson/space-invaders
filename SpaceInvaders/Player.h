@@ -2,34 +2,28 @@
 #include <SFML/Graphics.hpp>
 #include "Bullet.h"
 #include "Particle.h"
-#include "Enemy.h"
+#include "Constants.h"
+#include "Powerup.h"
+#include "Damageable.h"
 
-enum class PowerupType;
-
-enum class DamageResult
-{
-    Ignored,
-    Damaged,
-    Dead
-};
-
-class Player
+class Player : public Damageable
 {
 public:
     void init();
     void update(float dt, BulletManager &bullets, ParticleSystem &fx);
     void draw(sf::RenderTarget &rt) const;
 
-    DamageResult takeDamage(ParticleSystem &fx);
+    DamageResult takeDamage(int amount, sf::Vector2f impact) override;
     void applyPowerup(PowerupType pu);
 
-    sf::FloatRect getBounds() const;
+    sf::FloatRect getBounds() const override;
+    bool isHitBy(sf::Vector2f point, float radius) const override;
     sf::Vector2f getPos() const { return m_pos; }
     int getLives() const { return m_lives; }
     int getScore() const { return m_score; }
     void addScore(int s) { m_score += s; }
     bool isInvul() const { return m_invulTimer > 0.f; }
-    bool isAlive() const { return m_lives > 0; }
+    bool isAlive() const override { return m_lives > 0; }
 
     float getRapidTimer() const { return m_rapidTimer; }
     float getTripleTimer() const { return m_tripleTimer; }
