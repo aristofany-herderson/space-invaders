@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ranking - Space Invaders</title>
+  <style>
+    body { margin: 0; min-height: 100vh; background: #05050f; color: #e8e8ff;
+           font: 18px/1.4 ui-monospace, Consolas, monospace; display: grid; place-items: start center; }
+    main { width: min(520px, 100% - 32px); padding: 40px 0; }
+    h1 { text-align: center; color: #7cff6b; letter-spacing: 4px; }
+    #status { text-align: center; font-size: 14px; color: #888; }
+    #status.on { color: #7cff6b; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { padding: 8px 12px; border-bottom: 1px solid #222244; }
+    th { color: #888; font-weight: normal; text-align: left; }
+    td:first-child, th:first-child { width: 3ch; }
+    td:last-child, th:last-child { text-align: right; }
+    tbody tr:first-child td { color: #ffd84a; }
+    .empty { text-align: center; color: #888; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>RANKING</h1>
+  <p id="status">conectando...</p>
+  <table>
+    <thead><tr><th>#</th><th>Jogador</th><th>Pontos</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="3" class="empty">carregando...</td></tr></tbody>
+  </table>
+</main>
+<script>
+  const rows = document.getElementById('rows');
+  const status = document.getElementById('status');
+
+  function render(scores) {
+    rows.replaceChildren();
+    if (!scores.length) {
+      rows.innerHTML = '<tr><td colspan="3" class="empty">nenhuma pontuacao ainda</td></tr>';
+      return;
+    }
+    scores.forEach((s, i) => {
+      const tr = rows.insertRow();
+      tr.insertCell().textContent = i + 1;
+      tr.insertCell().textContent = s.name; // textContent: nome vem do jogador, nunca innerHTML
+      tr.insertCell().textContent = s.score.toLocaleString('pt-BR');
+    });
+  }
+
+  const es = new EventSource('/scores/stream'); // reconecta sozinho se cair
+  es.onopen = () => { status.textContent = 'ao vivo'; status.className = 'on'; };
+  es.onerror = () => { status.textContent = 'reconectando...'; status.className = ''; };
+  es.onmessage = e => render(JSON.parse(e.data));
+</script>
+</body>
+</html>

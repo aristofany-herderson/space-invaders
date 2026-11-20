@@ -9,6 +9,7 @@
 //           ├── AssetLoadException   (fonte/sprite/som obrigatorio nao carregou)
 //           └── PersistenceException (falha ao ler/gravar arquivo de dados)
 //                 └── InvalidDataException (arquivo existe mas o conteudo e invalido)
+//           └── NetworkException     (servidor de ranking offline ou com erro)
 //
 // Quem captura GameException trata qualquer falha "esperada"; erros de
 // programacao continuam sendo std::logic_error / std::invalid_argument.
@@ -48,4 +49,11 @@ class InvalidDataException : public PersistenceException
 public:
     InvalidDataException(const std::string &path, const std::string &reason)
         : PersistenceException(path, reason) {}
+};
+
+// Falha ao falar com o servidor de ranking (offline, timeout, resposta de erro).
+class NetworkException : public GameException
+{
+public:
+    explicit NetworkException(const std::string &msg) : GameException("Ranking: " + msg) {}
 };

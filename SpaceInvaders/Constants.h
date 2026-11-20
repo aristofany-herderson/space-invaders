@@ -6,6 +6,9 @@ namespace Cfg
     // Window
     constexpr unsigned W = 900, H = 700;
     constexpr const char *TITLE = "SpaceInvaders";
+    // Servidor do ranking (pasta server/ do repositorio)
+    constexpr const wchar_t *RANKING_HOST = L"localhost";
+    constexpr unsigned short RANKING_PORT = 3000;
 
     // Player
     constexpr int MAX_WAVES = 5;
