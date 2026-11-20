@@ -1,12 +1,9 @@
 #include "CppUnitTest.h"
-#include "Enemy.h"
+#include "EnemyManager.h"
 #include "Constants.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-// Testes da implementacao ATUAL (struct Enemy + enum EnemyType).
-// Depois da refatoracao para a classe abstrata Enemy / EnemyFactory, os testes
-// por tipo (Drone, Invader, ...) entram em EnemyHierarchyTests.cpp.
 namespace SpaceInvadersTests
 {
     TEST_CLASS(EnemyManagerTests)
@@ -25,6 +22,18 @@ namespace SpaceInvadersTests
             em.spawnFormation(1);
             float esperado = Cfg::FORM_START_Y + (Cfg::FORMATION_ROWS - 1) * Cfg::FORM_SPACING_Y;
             Assert::AreEqual(esperado, em.getLowestEnemyPos().y, 0.01f);
+        }
+
+        TEST_METHOD(SpawnFormation_CriaTodosOsInimigosDaFormacao)
+        {
+            em.spawnFormation(1);
+            Assert::AreEqual(static_cast<std::size_t>(Cfg::FORMATION_ROWS * Cfg::FORMATION_COLS), em.getEnemies().size());
+        }
+
+        TEST_METHOD(SpawnFormation_UfoSoApareceDepoisDoIntervalo)
+        {
+            em.spawnFormation(1);
+            Assert::IsFalse(em.hasUFO());
         }
 
         TEST_METHOD(SpawnFormation_NoInicio_NaoChegouAoChao)
