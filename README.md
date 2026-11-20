@@ -30,7 +30,7 @@ e o reorganizamos para aplicar os conceitos da disciplina:
 
 - **Classe abstrata e herança:** `Enemy` com as subclasses `Drone`, `Invader`, `Brute`, `Kamikaze`, `Elite` e `UFO`.
 - **Interface e polimorfismo:** `Damageable`, implementada por `Player`, `Enemy` e `Shield`.
-- **Padrões de projeto:** `EnemyFactory` (Factory) e `SoundManager` (Singleton).
+- **Padrões de projeto:** `EnemyFactory` (Factory) e `SoundManager` (Singleton), justificados na seção "Padrões de projeto".
 - **Tratamento de exceções:** hierarquia `GameException` (veja a seção "Tratamento de exceções").
 - **Extras:** GUI (SFML), banco de dados e API REST (libcurl) para o ranking online.
 - **Testes unitários:** Microsoft C++ Unit Test Framework.
@@ -48,8 +48,9 @@ e o reorganizamos para aplicar os conceitos da disciplina:
 # 🧪 Tecnologias
 
 - C++20
-- SFML 3 (gráficos, janela e áudio)
-- Visual Studio 2026
+- SFML 3.1 (gráficos, janela e áudio)
+- CMake 3.21+ (Linux, Windows e macOS)
+- Visual Studio 2026 (opcional, também usado para os testes)
 - Microsoft C++ Unit Test Framework (testes)
 - libcurl + API REST (Firebase/Supabase), previsto para o ranking
 
@@ -58,13 +59,17 @@ e o reorganizamos para aplicar os conceitos da disciplina:
 # 📂 Estrutura do projeto
 
 ```
+CMakeLists.txt                   build multiplataforma
 SpaceInvaders.slnx               solução do Visual Studio
 SpaceInvaders/                   código do jogo
     assets/                      fontes, sons e sprites
-    Background, Bullet, Enemy,   entidades e sistemas do jogo
-    Game, Particle, Player,
+    Damageable.h                 interface de objetos que recebem dano
+    Enemy, EnemyFactory,         hierarquia de inimigos, Factory e gerenciador da formação
+    EnemyManager
+    Background, Bullet, Game,    demais entidades e sistemas do jogo
+    Particle, Player, Powerup,
     Shield, SoundManager,
-    Spritegen
+    Spritegen, Random.h
     Exceptions.h                 hierarquia de exceções
     Storage                      leitura/gravação de hiscore.dat e settings.dat
 SpaceInvaders.Tests/             projeto de testes unitários
@@ -84,6 +89,25 @@ git clone https://github.com/aristofany-herderson/space-invaders.git
 
 cd space-invaders
 ```
+
+## Linux, macOS e Windows (CMake)
+
+Requisitos: compilador C++20 (GCC 11+, Clang 13+ ou MSVC 2022+), CMake 3.21+ e Git. Se o SFML 3 não estiver instalado, o CMake baixa e compila o SFML 3.1.0 sozinho.
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+No Linux, o SFML compilado a partir do código-fonte precisa das bibliotecas de desenvolvimento do sistema. Em Debian/Ubuntu:
+
+```bash
+sudo apt install libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev libfreetype-dev libharfbuzz-dev libopenal-dev libvorbis-dev libflac-dev
+```
+
+Para usar um SFML já instalado, passe `-DCMAKE_PREFIX_PATH=/caminho/do/SFML`. A pasta `SpaceInvaders/assets/` é copiada para ao lado do executável após o build.
+
+## Visual Studio (Windows)
 
 1. Baixe o **SFML 3.1** (Visual C++, 64 bits) e extraia em uma pasta.
 2. Ajuste os diretórios de include e lib do SFML nas propriedades do projeto `SpaceInvaders` (hoje apontam para `C:\Users\arist\source\SFML-3.1.0`).
@@ -135,13 +159,28 @@ Módulos principais:
 
 - **Game**: laço principal, estados e colisões
 - **Player**: movimento, tiro, vidas e power-ups
-- **Enemy / EnemyManager**: comportamento e formação dos inimigos
+- **Damageable**: interface implementada por `Player`, `Enemy` e `Shield`
+- **Enemy**: classe abstrata com `Drone`, `Invader`, `Brute`, `Kamikaze`, `Elite` e `UFO`
+- **EnemyFactory**: monta a formação de cada onda e cria o UFO
+- **EnemyManager**: movimento da formação, tiros do jogador contra inimigos e power-ups
 - **Bullet**: projéteis
 - **Shield**: escudos destrutíveis
 - **Particle / Background**: efeitos visuais
 - **SoundManager**: áudio (Singleton)
 - **Spritegen**: carregamento e geração de sprites
 - **Storage**: persistência local do recorde e do volume
+
+<br/>
+
+# 🧩 Padrões de projeto
+
+| Padrão | Onde | Por que |
+|---|---|---|
+| Factory | `EnemyFactory` | a formação de cada onda é uma tabela de tipos por linha. A Factory concentra esse conhecimento e o `EnemyManager` só recebe `unique_ptr<Enemy>`, sem `switch` por tipo. Um inimigo novo exige uma subclasse e uma linha na Factory. |
+| Singleton | `SoundManager::instance()` | existe um único dispositivo de áudio e um pool de vozes compartilhado. O construtor é privado e a cópia é proibida, então não há como criar uma segunda instância. |
+| Template Method | `Enemy::update` | a base define a ordem (movimento, depois tiro) e cada subclasse preenche `move`, `attack` e `canAttack`. |
+
+Princípios SOLID: `Game` depende da abstração `Damageable`, não de `Player`, `Shield` ou de cada inimigo (Dependency Inversion e Liskov); adicionar um tipo de inimigo não altera `EnemyManager` nem `Game` (Open/Closed); cada classe tem uma responsabilidade (Single Responsibility).
 
 <br/>
 
@@ -179,10 +218,7 @@ Passo a passo e lista do que é coberto em [`docs/testes.md`](docs/testes.md).
 
 # 📈 Próximos passos
 
-- Hierarquia `Enemy` abstrata e `EnemyFactory`
-- Interface `Damageable` em `Player`, `Enemy` e `Shield`
 - Ranking online (API REST + banco), tela de ranking e entrada do nome
-- Testes das novas classes
 - Modos de dificuldade, controle e conquistas
 
 <br/>
