@@ -12,7 +12,9 @@
 #include "Particle.h"
 #include "Spritegen.h"
 #include "RoundedRectShape.h"
+#include "RankingClient.h"
 #include <optional>
+#include <future>
 
 enum class GameState
 {
@@ -21,7 +23,9 @@ enum class GameState
     Playing,
     Paused,
     GameOver,
-    Win
+    Win,
+    NameEntry,
+    Ranking
 };
 
 class Game
@@ -105,4 +109,16 @@ private:
 
     void loadHighScore();
     void saveHighScore();
+
+    // Ranking online: a rede roda em outra thread para a janela nao travar.
+    std::string m_playerName;
+    std::future<std::vector<ScoreEntry>> m_rankingTask;
+    std::vector<ScoreEntry> m_ranking;
+    std::string m_rankingStatus;
+    ScoreEntry m_highlight{"", -1};
+
+    void openRanking(std::optional<ScoreEntry> submit);
+    void pollRanking();
+    void drawNameEntry();
+    void drawRanking();
 };

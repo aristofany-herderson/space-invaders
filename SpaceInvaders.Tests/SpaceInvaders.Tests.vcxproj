@@ -86,6 +86,7 @@
   <ItemGroup>
     <ClCompile Include="ExceptionsTests.cpp" />
     <ClCompile Include="StorageTests.cpp" />
+    <ClCompile Include="RankingTests.cpp" />
     <ClCompile Include="PlayerTests.cpp" />
     <ClCompile Include="ShieldTests.cpp" />
     <ClCompile Include="BulletTests.cpp" />
@@ -94,6 +95,7 @@
   <ItemGroup>
     <!-- Codigo do jogo compilado junto com os testes (sem Game.cpp nem main) -->
     <ClCompile Include="..\SpaceInvaders\Storage.cpp" />
+    <ClCompile Include="..\SpaceInvaders\RankingClient.cpp" />
     <ClCompile Include="..\SpaceInvaders\Player.cpp" />
     <ClCompile Include="..\SpaceInvaders\Shield.cpp" />
     <ClCompile Include="..\SpaceInvaders\Bullet.cpp" />

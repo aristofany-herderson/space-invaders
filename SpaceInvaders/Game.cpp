@@ -9,6 +9,8 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <cctype>
+#include <chrono>
 
 Game::Game()
     : m_window(sf::VideoMode({Cfg::W, Cfg::H}), Cfg::TITLE,
@@ -237,6 +239,8 @@ void Game::processEvents()
                 if (kp->code == sf::Keyboard::Key::Enter ||
                     kp->code == sf::Keyboard::Key::Space)
                     startGame();
+                if (kp->code == sf::Keyboard::Key::L)
+                    openRanking(std::nullopt);
                 if (kp->code == sf::Keyboard::Key::Escape)
                     m_window.close();
                 break;
@@ -258,10 +262,41 @@ void Game::processEvents()
             case GameState::Win:
                 if (kp->code == sf::Keyboard::Key::Enter ||
                     kp->code == sf::Keyboard::Key::Space)
-                    m_state = GameState::Menu;
+                    m_state = m_player.getScore() > 0 ? GameState::NameEntry : GameState::Menu;
                 if (kp->code == sf::Keyboard::Key::R)
                     startGame();
                 break;
+            case GameState::NameEntry:
+                if (kp->code == sf::Keyboard::Key::Backspace && !m_playerName.empty())
+                    m_playerName.pop_back();
+                if (kp->code == sf::Keyboard::Key::Enter && !m_playerName.empty())
+                {
+                    while (m_playerName.back() == ' ')
+                        m_playerName.pop_back();
+                    openRanking(ScoreEntry{m_playerName, m_player.getScore()});
+                }
+                if (kp->code == sf::Keyboard::Key::Escape)
+                    m_state = GameState::Menu;
+                break;
+            case GameState::Ranking:
+                if (kp->code == sf::Keyboard::Key::Enter ||
+                    kp->code == sf::Keyboard::Key::Space ||
+                    kp->code == sf::Keyboard::Key::Escape)
+                    m_state = GameState::Menu;
+                break;
+            }
+        }
+
+        if (m_state == GameState::NameEntry)
+        {
+            if (const auto *te = ev->getIf<sf::Event::TextEntered>())
+            {
+                char32_t c = te->unicode;
+                bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                          (c >= '0' && c <= '9') || c == '-' || c == '_' ||
+                          (c == ' ' && !m_playerName.empty()); // sem espaco no inicio
+                if (ok && m_playerName.size() < 16)
+                    m_playerName += static_cast<char>(std::toupper(static_cast<int>(c)));
             }
         }
 
@@ -336,9 +371,41 @@ void Game::processEvents()
     }
 }
 
+void Game::openRanking(std::optional<ScoreEntry> submit)
+{
+    m_state = GameState::Ranking;
+    m_ranking.clear();
+    m_rankingStatus = submit ? "SENDING..." : "LOADING...";
+    m_highlight = submit.value_or(ScoreEntry{"", -1});
+    // ponytail: se uma requisicao anterior ainda estiver pendente, isto espera ela (max ~3s de timeout)
+    m_rankingTask = std::async(std::launch::async, [submit]
+                               {
+        if (submit)
+            RankingClient::submitScore(*submit);
+        return RankingClient::fetchTop(10); });
+}
+
+void Game::pollRanking()
+{
+    if (!m_rankingTask.valid() ||
+        m_rankingTask.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        return;
+    try
+    {
+        m_ranking = m_rankingTask.get();
+        m_rankingStatus = m_ranking.empty() ? "NO SCORES YET" : "";
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "[Ranking] " << e.what() << "\n";
+        m_rankingStatus = "RANKING OFFLINE";
+    }
+}
+
 void Game::update(float dt)
 {
     m_menuPulse += dt;
+    pollRanking();
 
     if (m_shakeTimer > 0.f)
         m_shakeTimer -= dt;
@@ -609,6 +676,14 @@ void Game::render()
     case GameState::Win:
         drawWin();
         drawHUD();
+        break;
+
+    case GameState::NameEntry:
+        drawNameEntry();
+        break;
+
+    case GameState::Ranking:
+        drawRanking();
         break;
     }
 
@@ -1193,7 +1268,7 @@ void Game::drawMenu()
 
         float alpha = std::sin(m_menuPulse * 3.f) * 0.5f + 0.5f;
         alpha = 160.f + alpha * 95.f;
-        sf::Text hint(m_font, "PRESS ENTER OR SPACE TO START", 14u);
+        sf::Text hint(m_font, "ENTER TO START  -  L FOR RANKING", 14u);
         hint.setFillColor({180, 180, 180, static_cast<std::uint8_t>(alpha)});
         auto pb = hint.getLocalBounds();
         hint.setOrigin({pb.size.x / 2.f, pb.size.y / 2.f});
@@ -1299,7 +1374,8 @@ void Game::drawGameOver()
 
     const float actionsY = midY + 65.f;
     drawActionRow(cx, actionsY, {"R"}, "Retry");
-    drawActionRow(cx, actionsY + 50.f, {"ENTER", "SPACE"}, "Menu");
+    drawActionRow(cx, actionsY + 50.f, {"ENTER", "SPACE"},
+                  m_player.getScore() > 0 ? "Save score" : "Menu");
 }
 
 void Game::drawWin()
@@ -1339,5 +1415,135 @@ void Game::drawWin()
     sc.setPosition({cx, midY + 16.f});
     m_window.draw(sc);
 
-    drawActionRow(cx, midY + 72.f, {"ENTER", "SPACE"}, "Menu");
+    drawActionRow(cx, midY + 72.f, {"ENTER", "SPACE"},
+                  m_player.getScore() > 0 ? "Save score" : "Menu");
+}
+
+void Game::drawNameEntry()
+{
+    sf::RectangleShape overlay({float(Cfg::W), float(Cfg::H)});
+    overlay.setFillColor({0, 0, 20, 170});
+    m_window.draw(overlay);
+
+    const float cx = float(Cfg::W) / 2.f;
+    const float midY = float(Cfg::H) / 2.f;
+
+    auto centered = [&](const std::string &s, unsigned size, float y, sf::Color col)
+    {
+        sf::Text t(m_font, s, size);
+        t.setFillColor(col);
+        auto b = t.getLocalBounds();
+        t.setOrigin({b.position.x + b.size.x / 2.f, b.position.y + b.size.y / 2.f});
+        t.setPosition({cx, y});
+        m_window.draw(t);
+    };
+
+    centered("ENTER YOUR NAME", 34u, midY - 140.f, {80, 220, 255, 255});
+    centered("SCORE: " + std::to_string(m_player.getScore()), 18u, midY - 90.f, {255, 220, 80, 230});
+
+    const float boxW = 380.f, boxH = 58.f;
+    RoundedRectShape box({boxW, boxH}, 8.f);
+    box.setPosition({cx - boxW / 2.f, midY - 40.f});
+    box.setFillColor({20, 30, 70, 220});
+    box.setOutlineColor({80, 160, 255, 230});
+    box.setOutlineThickness(2.f);
+    m_window.draw(box);
+
+    bool cursorOn = std::fmod(m_menuPulse, 1.f) < 0.5f;
+    std::string shown = m_playerName + (cursorOn && m_playerName.size() < 16 ? "_" : " ");
+    centered(shown, 26u, midY - 40.f + boxH / 2.f, {255, 255, 255, 255});
+
+    centered(std::to_string(m_playerName.size()) + "/16", 12u, midY + 34.f, {140, 160, 200, 180});
+
+    drawActionRow(cx, midY + 70.f, {"ENTER"}, m_playerName.empty() ? "Type a name" : "Submit");
+    drawActionRow(cx, midY + 120.f, {"ESC"}, "Skip");
+}
+
+void Game::drawRanking()
+{
+    sf::RectangleShape overlay({float(Cfg::W), float(Cfg::H)});
+    overlay.setFillColor({0, 0, 20, 150});
+    m_window.draw(overlay);
+
+    const float cx = float(Cfg::W) / 2.f;
+    float pulse = std::sin(m_menuPulse * 2.2f) * 0.5f + 0.5f;
+
+    sf::Text title(m_font, "RANKING", 46u);
+    title.setFillColor({255, 210, 60, 255});
+    title.setOutlineColor({120, 70, 0, 255});
+    title.setOutlineThickness(3.f);
+    auto tb = title.getLocalBounds();
+    title.setOrigin({tb.position.x + tb.size.x / 2.f, tb.position.y + tb.size.y / 2.f});
+    float s = 1.f + pulse * 0.03f;
+    title.setScale({s, s});
+    title.setPosition({cx, 80.f});
+    m_window.draw(title);
+
+    const float panelW = 520.f, rowH = 40.f, headerH = 40.f;
+    const float panelX = cx - panelW / 2.f, panelY = 135.f;
+    const float panelH = headerH + rowH * 10.f + 16.f;
+
+    RoundedRectShape panel({panelW, panelH}, 10.f);
+    panel.setPosition({panelX, panelY});
+    panel.setFillColor({10, 10, 40, 190});
+    panel.setOutlineColor({60, 100, 200, 140});
+    panel.setOutlineThickness(1.f);
+    m_window.draw(panel);
+
+    auto text = [&](const std::string &str, unsigned size, sf::Color col, float x, float y, float alignX)
+    {
+        sf::Text t(m_font, str, size);
+        t.setFillColor(col);
+        auto b = t.getLocalBounds();
+        t.setOrigin({b.position.x + b.size.x * alignX, b.position.y + b.size.y / 2.f});
+        t.setPosition({x, y});
+        m_window.draw(t);
+    };
+
+    const float colRank = panelX + 40.f, colName = panelX + 90.f, colScore = panelX + panelW - 30.f;
+    const sf::Color headCol{140, 170, 220, 200};
+    text("#", 13u, headCol, colRank, panelY + headerH / 2.f, 0.5f);
+    text("PLAYER", 13u, headCol, colName, panelY + headerH / 2.f, 0.f);
+    text("SCORE", 13u, headCol, colScore, panelY + headerH / 2.f, 1.f);
+
+    sf::RectangleShape sep({panelW - 20.f, 1.f});
+    sep.setPosition({panelX + 10.f, panelY + headerH});
+    sep.setFillColor({60, 100, 200, 100});
+    m_window.draw(sep);
+
+    if (!m_rankingStatus.empty())
+    {
+        sf::Color col = m_rankingStatus == "RANKING OFFLINE" ? sf::Color{255, 90, 90, 230}
+                                                             : sf::Color{180, 180, 220, static_cast<std::uint8_t>(140 + pulse * 100)};
+        text(m_rankingStatus, 20u, col, cx, panelY + panelH / 2.f, 0.5f);
+    }
+
+    const sf::Color medal[3] = {{255, 210, 60, 255}, {200, 210, 230, 255}, {220, 140, 80, 255}};
+    bool highlighted = false;
+    for (size_t i = 0; i < m_ranking.size() && i < 10; ++i)
+    {
+        const auto &e = m_ranking[i];
+        float y = panelY + headerH + 8.f + rowH * float(i);
+        float midRow = y + rowH / 2.f;
+
+        bool mine = !highlighted && e.playerName == m_highlight.playerName && e.score == m_highlight.score;
+        if (mine)
+        {
+            highlighted = true;
+            RoundedRectShape bar({panelW - 20.f, rowH - 4.f}, 6.f);
+            bar.setPosition({panelX + 10.f, y + 2.f});
+            bar.setFillColor({40, 160, 255, static_cast<std::uint8_t>(60 + pulse * 60)});
+            bar.setOutlineColor({120, 220, 255, 200});
+            bar.setOutlineThickness(1.f);
+            m_window.draw(bar);
+        }
+
+        sf::Color col = i < 3 ? medal[i] : sf::Color{220, 225, 255, 230};
+        unsigned size = i < 3 ? 20u : 17u;
+        text(std::to_string(i + 1), size, col, colRank, midRow, 0.5f);
+        text(e.playerName, size, col, colName, midRow, 0.f);
+        text(std::to_string(e.score), size, col, colScore, midRow, 1.f);
+    }
+
+    drawActionRow(cx, panelY + panelH + 40.f, {"ENTER", "ESC"}, "Menu");
 }

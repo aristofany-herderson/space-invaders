@@ -1,0 +1,11 @@
+{
+  "name": "space-invaders-ranking",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}

@@ -34,6 +34,7 @@ set(GAME_SOURCES
     SpaceInvaders/Game.cpp
     SpaceInvaders/Particle.cpp
     SpaceInvaders/Player.cpp
+    SpaceInvaders/RankingClient.cpp
     SpaceInvaders/RoundedRectShape.cpp
     SpaceInvaders/Shield.cpp
     SpaceInvaders/SoundManager.cpp
@@ -43,6 +44,9 @@ set(GAME_SOURCES
 add_executable(SpaceInvaders SpaceInvaders/main.cpp ${GAME_SOURCES})
 target_include_directories(SpaceInvaders PRIVATE SpaceInvaders)
 target_link_libraries(SpaceInvaders PRIVATE SFML::Graphics SFML::Audio SFML::Window SFML::System)
+if(WIN32)
+    target_link_libraries(SpaceInvaders PRIVATE winhttp)
+endif()
 
 if(MSVC)
     target_compile_options(SpaceInvaders PRIVATE /W3 /utf-8)
