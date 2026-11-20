@@ -76,6 +76,49 @@ namespace SpaceInvadersTests
             Assert::AreEqual(antes - 1, vivos(s));
         }
 
+        TEST_METHOD(Damageable_TakeDamageNoBloco_ReduzVidaERetornaDamaged)
+        {
+            Shield s;
+            s.init({0.f, 0.f});
+            Damageable &alvo = s;
+            Assert::IsTrue(alvo.takeDamage(1, centroDoPrimeiroBloco(s)) == DamageResult::Damaged);
+            Assert::AreEqual(2, s.getBlocks().front().hp);
+        }
+
+        TEST_METHOD(Damageable_TakeDamageForaDosBlocos_EhIgnorado)
+        {
+            Shield s;
+            s.init({0.f, 0.f});
+            Assert::IsTrue(s.takeDamage(1, {5000.f, 5000.f}) == DamageResult::Ignored);
+        }
+
+        TEST_METHOD(Damageable_IsHitBy_ConcordaComOsBlocos)
+        {
+            Shield s;
+            s.init({0.f, 0.f});
+            Assert::IsTrue(s.isHitBy(centroDoPrimeiroBloco(s), Cfg::BULLET_RADIUS));
+            Assert::IsFalse(s.isHitBy({5000.f, 5000.f}, Cfg::BULLET_RADIUS));
+        }
+
+        TEST_METHOD(Damageable_DanoMaiorQueAVida_DestroiOBlocoEmUmGolpe)
+        {
+            Shield s;
+            s.init({0.f, 0.f});
+            s.takeDamage(3, centroDoPrimeiroBloco(s));
+            Assert::IsFalse(s.getBlocks().front().alive);
+        }
+
+        TEST_METHOD(Damageable_DestruirTodosOsBlocos_RetornaDeadEIsAliveFalso)
+        {
+            Shield s;
+            s.init({0.f, 0.f});
+            DamageResult r = DamageResult::Ignored;
+            for (const auto &b : s.getBlocks())
+                r = s.takeDamage(3, b.pos + sf::Vector2f{Cfg::SHIELD_BLOCK / 2.f, Cfg::SHIELD_BLOCK / 2.f});
+            Assert::IsTrue(r == DamageResult::Dead);
+            Assert::IsFalse(s.isAlive());
+        }
+
         TEST_METHOD(ShieldManager_ResetRestauraEscudos)
         {
             ShieldManager m;
