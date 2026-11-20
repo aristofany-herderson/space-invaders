@@ -1,8 +1,8 @@
 # Diagramas de sequência
 
-Quatro cenários: o primeiro descreve o **código atual** (quadro de jogo) e os demais descrevem o **comportamento-alvo** da proposta.
+Quatro cenários: os três primeiros descrevem o **código atual** (quadro de jogo, colisão polimórfica e montagem de onda) e o último descreve o **comportamento-alvo** do ranking online.
 
-## 1. Um quadro de jogo (atual)
+## 1. Um quadro de jogo
 
 `Game::run` → `update(dt)`, como está hoje em `Game.cpp`.
 
@@ -28,8 +28,8 @@ sequenceDiagram
         EM-->>G: onKill(pos, cor, pontos)
         G->>P: addScore(pontos)
         G->>BM: update(dt)
-        G->>SM: checkBulletHit (tiros do jogador e dos inimigos)
-        G->>P: takeDamage(fx) (tiro inimigo no jogador)
+        G->>SM: collide(bullet, shield) (tiros do jogador e dos inimigos)
+        G->>P: collide(bullet, player) (tiro inimigo no jogador)
         P-->>G: DamageResult
         alt Dead
             G->>G: saveHighScore() / estado = GameOver
@@ -41,7 +41,7 @@ sequenceDiagram
     end
 ```
 
-## 2. Tiro do jogador contra um alvo (alvo: `Damageable`)
+## 2. Tiro contra um alvo (`Damageable`)
 
 Mostra o polimorfismo: `Game` não precisa saber se o alvo é `Drone`, `Brute`, `Shield`…
 
@@ -58,10 +58,10 @@ sequenceDiagram
     BM-->>G: bullets
     loop para cada Bullet viva
         loop para cada Damageable vivo do outro lado
-            G->>T: getBounds()
-            T-->>G: FloatRect
-            alt bullet dentro dos limites
-                G->>T: takeDamage(1)
+            G->>T: isHitBy(bullet.pos, raio)
+            T-->>G: bool
+            alt tiro atingiu o alvo
+                G->>T: takeDamage(1, bullet.pos)
                 T-->>G: DamageResult
                 G->>G: bullet.alive = false
                 alt Damaged
@@ -79,7 +79,7 @@ sequenceDiagram
     end
 ```
 
-## 3. Montagem de uma onda (alvo: `EnemyFactory`)
+## 3. Montagem de uma onda (`EnemyFactory`)
 
 ```mermaid
 sequenceDiagram
@@ -102,7 +102,7 @@ sequenceDiagram
     Note over G,EM: Em cada update, EM chama enemy->update(), que usa move() e attack() da subclasse
 ```
 
-## 4. Fim de partida e ranking online (alvo)
+## 4. Fim de partida e ranking online (alvo, ainda não implementado)
 
 Fluxo previsto para o diferencial do projeto, com o tratamento de falhas de rede.
 O envio deve acontecer em outra thread, para não travar o jogo.
