@@ -39,8 +39,7 @@ void Game::loadSettings()
     }
     catch (const GameException &e)
     {
-        std::cerr << "[Settings] " << e.what() << " - usando volume padrao
-";
+        std::cerr << "[Settings] " << e.what() << " - usando volume padrao\n";
         m_volume = Storage::DEFAULT_VOLUME;
     }
     SFX.setMasterVolume(m_volume);
@@ -54,8 +53,7 @@ void Game::saveSettings()
     }
     catch (const std::exception &e)
     {
-        std::cerr << "[Settings] nao foi possivel salvar: " << e.what() << "
-";
+        std::cerr << "[Settings] nao foi possivel salvar: " << e.what() << "\n";
     }
 }
 
@@ -67,8 +65,7 @@ void Game::loadHighScore()
     }
     catch (const GameException &e)
     {
-        std::cerr << "[HiScore] " << e.what() << " - recorde reiniciado
-";
+        std::cerr << "[HiScore] " << e.what() << " - recorde reiniciado\n";
         m_hiScore = 0;
     }
 }
@@ -84,8 +81,7 @@ void Game::saveHighScore()
         }
         catch (const std::exception &e)
         {
-            std::cerr << "[HiScore] nao foi possivel salvar: " << e.what() << "
-";
+            std::cerr << "[HiScore] nao foi possivel salvar: " << e.what() << "\n";
         }
     }
 }
@@ -188,6 +184,14 @@ void Game::nextWave()
 
     m_player.addLife();
     SFX.play(SoundId::Powerup, 90.f);
+}
+
+DamageResult Game::damagePlayer(int amount, sf::Vector2f impact)
+{
+    DamageResult result = m_player.takeDamage(amount, impact);
+    if (result != DamageResult::Ignored)
+        m_fx.spawnExplosion(m_player.getPos(), Cfg::COL_PLAYER, 20);
+    return result;
 }
 
 void Game::triggerShake(float mag, float dur)
@@ -397,7 +401,7 @@ void Game::update(float dt)
                         SFX.play(SoundId::ShieldHit, 80.f);
                         return;
                     }
-                    auto result = m_player.takeDamage(m_fx);
+                    auto result = damagePlayer(1, m_player.getPos());
                     if (result != DamageResult::Ignored) {
                         triggerShake(10.f, 0.4f);
                         triggerFlash({ 255, 80, 20, 200 }, 0.5f);
@@ -451,7 +455,7 @@ void Game::update(float dt)
     }
     if (m_enemies.hasReachedBottom())
     {
-        auto result = m_player.takeDamage(m_fx);
+        auto result = damagePlayer(1, m_player.getPos());
         if (result != DamageResult::Ignored)
         {
             triggerShake();
@@ -469,17 +473,35 @@ void Game::update(float dt)
     }
 }
 
+std::optional<DamageResult> Game::collide(Bullet &b, Damageable &target, float radius)
+{
+    if (!b.alive || !target.isAlive() || !target.isHitBy(b.pos, radius))
+        return std::nullopt;
+    b.alive = false;
+    return target.takeDamage(1, b.pos);
+}
+
+bool Game::hitShields(Bullet &b)
+{
+    for (auto &shield : m_shields.getShields())
+    {
+        if (collide(b, shield, Cfg::BULLET_RADIUS))
+        {
+            m_shields.markDirty();
+            return true;
+        }
+    }
+    return false;
+}
+
 void Game::checkPlayerBulletVsShields()
 {
     for (auto &b : m_bullets.getAll())
     {
-        if (b.owner != BulletOwner::Player || !b.alive)
+        if (b.owner != BulletOwner::Player)
             continue;
-        if (m_shields.checkBulletHit(b.pos))
-        {
-            b.alive = false;
+        if (hitShields(b))
             SFX.play(SoundId::ShieldHit, 50.f);
-        }
     }
 }
 
@@ -487,37 +509,32 @@ void Game::checkEnemyBulletVsShields()
 {
     for (auto &b : m_bullets.getAll())
     {
-        if (b.owner != BulletOwner::Enemy || !b.alive)
+        if (b.owner != BulletOwner::Enemy)
             continue;
-        if (m_shields.checkBulletHit(b.pos))
-        {
-            b.alive = false;
+        if (hitShields(b))
             SFX.play(SoundId::ShieldHit, 60.f);
-        }
     }
 }
 
 void Game::checkEnemyBulletVsPlayer()
 {
-    sf::FloatRect pb = m_player.getBounds();
     for (auto &b : m_bullets.getAll())
     {
-        if (b.owner != BulletOwner::Enemy || !b.alive)
+        if (b.owner != BulletOwner::Enemy)
             continue;
-        if (pb.contains(b.pos))
+        auto result = collide(b, m_player, 0.f);
+        if (!result)
+            continue;
+        if (*result != DamageResult::Ignored)
         {
-            b.alive = false;
-            auto result = m_player.takeDamage(m_fx);
-            if (result != DamageResult::Ignored)
-            {
-                triggerShake();
-                triggerFlash({255, 50, 50, 160});
-            }
-            if (result == DamageResult::Dead)
-            {
-                saveHighScore();
-                m_state = GameState::GameOver;
-            }
+            m_fx.spawnExplosion(m_player.getPos(), Cfg::COL_PLAYER, 20);
+            triggerShake();
+            triggerFlash({255, 50, 50, 160});
+        }
+        if (*result == DamageResult::Dead)
+        {
+            saveHighScore();
+            m_state = GameState::GameOver;
         }
     }
 }
@@ -1020,7 +1037,7 @@ void Game::drawMenu()
 
         sf::RectangleShape shine({btnW - 20.f, 6.f});
         shine.setPosition({cx - (btnW - 20.f) / 2.f, btnY + 4.f});
-        shine.setFillColor({255, 255, 255, hovered ? 50u : 25u});
+        shine.setFillColor({255, 255, 255, static_cast<std::uint8_t>(hovered ? 50 : 25)});
         m_window.draw(shine);
 
         sf::Text playTxt(m_font, "PLAY", 26u);

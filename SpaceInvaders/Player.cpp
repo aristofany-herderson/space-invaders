@@ -1,9 +1,10 @@
 #include "Player.h"
 #include "Constants.h"
-#include "SpriteGen.h"
+#include "Spritegen.h"
 #include "SoundManager.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 void Player::init()
 {
@@ -85,18 +86,17 @@ void Player::update(float dt, BulletManager &bullets, ParticleSystem &fx)
     m_thrustPhase += dt * 12.f;
 }
 
-DamageResult Player::takeDamage(ParticleSystem &fx)
+DamageResult Player::takeDamage(int amount, sf::Vector2f)
 {
-    if (m_invulTimer > 0.f || m_shieldActive)
+    if (amount <= 0 || m_invulTimer > 0.f || m_shieldActive)
         return DamageResult::Ignored;
 
-    fx.spawnExplosion(m_pos, Cfg::COL_PLAYER, 20);
     SFX.play(SoundId::PlayerHit, 85.f);
 
     m_invulTimer = Cfg::PLAYER_INVUL;
     m_blinkTimer = 0.f;
 
-    m_lives--;
+    m_lives = std::max(0, m_lives - amount);
 
     if (m_lives <= 0)
         return DamageResult::Dead;
@@ -129,6 +129,14 @@ sf::FloatRect Player::getBounds() const
 {
     auto sz = GFX.player.getSize();
     return {{m_pos.x - sz.x / 2.f, m_pos.y - sz.y / 2.f}, {float(sz.x), float(sz.y)}};
+}
+
+bool Player::isHitBy(sf::Vector2f point, float radius) const
+{
+    sf::FloatRect b = getBounds();
+    b.position -= sf::Vector2f{radius, radius};
+    b.size += sf::Vector2f{radius * 2.f, radius * 2.f};
+    return b.contains(point);
 }
 
 void Player::draw(sf::RenderTarget &rt) const

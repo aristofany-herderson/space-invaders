@@ -7,10 +7,10 @@
 #include "SoundManager.h"
 #include "Shield.h"
 #include "Bullet.h"
-#include "Enemy.h"
+#include "EnemyManager.h"
 #include "Player.h"
 #include "Particle.h"
-#include "SpriteGen.h"
+#include "Spritegen.h"
 #include "RoundedRectShape.h"
 #include <optional>
 
@@ -75,6 +75,7 @@ private:
 
     void startGame();
     void nextWave();
+    DamageResult damagePlayer(int amount, sf::Vector2f impact);
     void triggerShake(float mag = Cfg::SHAKE_MAG, float dur = Cfg::SHAKE_DUR);
     void triggerFlash(sf::Color col, float dur = Cfg::FLASH_DUR);
 
@@ -92,6 +93,9 @@ private:
                        const std::vector<std::string> &keys,
                        const std::string &desc,
                        unsigned descFontSize = 17u);
+
+    std::optional<DamageResult> collide(Bullet &b, Damageable &target, float radius);
+    bool hitShields(Bullet &b);
 
     void checkPlayerBulletVsShields();
     void checkEnemyBulletVsPlayer();

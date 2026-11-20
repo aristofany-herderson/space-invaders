@@ -1,6 +1,6 @@
 #include "Bullet.h"
 #include "Constants.h"
-#include "SpriteGen.h"
+#include "Spritegen.h"
 #include <algorithm>
 
 void BulletManager::spawn(sf::Vector2f pos, sf::Vector2f vel, BulletOwner owner)

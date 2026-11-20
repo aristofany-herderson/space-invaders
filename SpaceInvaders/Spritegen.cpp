@@ -1,4 +1,4 @@
-#include "SpriteGen.h"
+#include "Spritegen.h"
 #include "Constants.h"
 #include <cmath>
 #include <iostream>
