@@ -11,3 +11,10 @@ x64/
 hiscore.dat
 settings.dat
 CMakeUserPresets.json
+*.docx
+checkpoint1.md
+checkpoint1.pdf
+work.pdf
+zip.py
+zips/
+.vscode/
