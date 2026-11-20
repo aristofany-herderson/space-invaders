@@ -15,6 +15,7 @@ namespace Cfg
     constexpr float PLAYER_BLINK = 0.09f;
     constexpr int PLAYER_LIVES = 3;
     constexpr float PLAYER_BULLET_SPD = 520.f;
+    constexpr float BULLET_RADIUS = 4.f;
 
     // Enemy
     constexpr float ENEMY_BULLET_SPD = 240.f;
