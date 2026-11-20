@@ -53,16 +53,36 @@ namespace SpaceInvadersTests
 
         TEST_METHOD(TakeDamage_PrimeiroDano_RetornaDamagedEFicaInvulneravel)
         {
-            auto r = player.takeDamage(fx);
+            auto r = player.takeDamage(1, {});
             Assert::IsTrue(r == DamageResult::Damaged);
             Assert::AreEqual(Cfg::PLAYER_LIVES - 1, player.getLives());
             Assert::IsTrue(player.isInvul());
         }
 
+        TEST_METHOD(Damageable_JogadorTratadoPelaInterface)
+        {
+            Damageable &alvo = player;
+            Assert::IsTrue(alvo.isAlive());
+            Assert::IsTrue(alvo.takeDamage(1, {}) == DamageResult::Damaged);
+            Assert::AreEqual(Cfg::PLAYER_LIVES - 1, player.getLives());
+        }
+
+        TEST_METHOD(IsHitBy_PontoNoCentro_Acerta)
+        {
+            Assert::IsTrue(player.isHitBy(player.getPos(), 1.f));
+            Assert::IsFalse(player.isHitBy({0.f, 0.f}, 0.f));
+        }
+
+        TEST_METHOD(TakeDamage_ValorNaoPositivo_EhIgnorado)
+        {
+            Assert::IsTrue(player.takeDamage(0, {}) == DamageResult::Ignored);
+            Assert::AreEqual(Cfg::PLAYER_LIVES, player.getLives());
+        }
+
         TEST_METHOD(TakeDamage_DuranteInvulnerabilidade_EhIgnorado)
         {
-            player.takeDamage(fx);
-            auto r = player.takeDamage(fx);
+            player.takeDamage(1, {});
+            auto r = player.takeDamage(1, {});
             Assert::IsTrue(r == DamageResult::Ignored);
             Assert::AreEqual(Cfg::PLAYER_LIVES - 1, player.getLives());
         }
@@ -71,7 +91,7 @@ namespace SpaceInvadersTests
         {
             player.applyPowerup(PowerupType::Shield);
             Assert::IsTrue(player.hasShield());
-            auto r = player.takeDamage(fx);
+            auto r = player.takeDamage(1, {});
             Assert::IsTrue(r == DamageResult::Ignored);
             Assert::AreEqual(Cfg::PLAYER_LIVES, player.getLives());
         }
@@ -81,7 +101,7 @@ namespace SpaceInvadersTests
             DamageResult r = DamageResult::Ignored;
             for (int i = 0; i < Cfg::PLAYER_LIVES; ++i)
             {
-                r = player.takeDamage(fx);
+                r = player.takeDamage(1, {});
                 if (i < Cfg::PLAYER_LIVES - 1)
                     esperaInvulnerabilidade();
             }
@@ -92,7 +112,7 @@ namespace SpaceInvadersTests
 
         TEST_METHOD(Invulnerabilidade_Expira)
         {
-            player.takeDamage(fx);
+            player.takeDamage(1, {});
             esperaInvulnerabilidade();
             Assert::IsFalse(player.isInvul());
         }
@@ -127,7 +147,7 @@ namespace SpaceInvadersTests
         TEST_METHOD(Init_ReiniciaAposPartida)
         {
             player.addScore(500);
-            player.takeDamage(fx);
+            player.takeDamage(1, {});
             player.applyPowerup(PowerupType::Shield);
             player.init();
             Assert::AreEqual(0, player.getScore());
