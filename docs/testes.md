@@ -19,7 +19,7 @@ e já está na solução (`SpaceInvaders.slnx`).
 4. **Executar Tudo** (`Ctrl+R, A`).
 
 O projeto de testes é uma DLL que compila junto os `.cpp` do jogo que **não dependem de janela** (`Player`, `Shield`, `Bullet`,
-`Enemy`, `Particle`, `Spritegen`, `SoundManager` e `Storage`). `Game.cpp` e a `main` ficam de fora. Um evento pós-build copia as DLLs do SFML
+`Enemy`, `EnemyFactory`, `EnemyManager`, `Particle`, `Spritegen`, `SoundManager` e `Storage`). `Game.cpp` e a `main` ficam de fora. Um evento pós-build copia as DLLs do SFML
 para a pasta de saída dos testes.
 
 ## O que é testado
@@ -28,10 +28,11 @@ para a pasta de saída dos testes.
 |---|---|---|
 | `ExceptionsTests.cpp` | hierarquia de exceções | herança (`InvalidDataException` → `PersistenceException` → `GameException`), caminho/mensagem guardados |
 | `StorageTests.cpp` | `Storage` | leitura/gravação de `hiscore.dat` e `settings.dat`, arquivo inexistente, conteúdo inválido, valores fora da faixa, diretório inexistente |
-| `PlayerTests.cpp` | `Player` | estado inicial, pontuação, vidas, dano (`Damaged`/`Ignored`/`Dead`), invulnerabilidade, escudo, power-ups |
-| `ShieldTests.cpp` | `Shield`, `ShieldManager` | blocos com vida cheia, acerto, destruição em 3 tiros, `reset()` |
+| `PlayerTests.cpp` | `Player` | estado inicial, pontuação, vidas, dano (`Damaged`/`Ignored`/`Dead`), invulnerabilidade, escudo, power-ups, uso pela interface `Damageable` |
+| `ShieldTests.cpp` | `Shield`, `ShieldManager` | blocos com vida cheia, acerto, destruição em 3 tiros, `reset()`, `Damageable` (`takeDamage`, `isHitBy`, `isAlive`) |
 | `BulletTests.cpp` | `BulletManager` | tiro simples/triplo/inimigo, movimento, remoção fora da tela e de balas mortas |
 | `EnemyManagerTests.cpp` | `EnemyManager` | formação inicial, reinício por onda, formação desce até o chão; consistência das constantes de pontuação |
+| `EnemyHierarchyTests.cpp` | `EnemyFactory`, `Enemy` e subclasses, `UFO` | quantidade e tipo por linha, subclasse certa por `EnemyType`, tipo inválido, pontuação/vida/cor por subclasse, dano e morte, polimorfismo via `Damageable`, tiros do `Drone` e do `Elite`, movimento do `UFO` |
 
 ### Tratamento de exceções nos testes
 
@@ -48,8 +49,7 @@ O `Game` captura `GameException` ao carregar e usa o valor padrão (registrando 
 
 ## Pendências
 
-- Quando a hierarquia `Enemy` / `EnemyFactory` for integrada, acrescentar `EnemyHierarchyTests.cpp`:
-  pontuação, vida e movimento de cada subclasse, a Factory (quantidade e tipo de inimigos por linha) e o polimorfismo via `Damageable`.
 - Quando o ranking existir, testar a (de)serialização JSON do `ScoreEntry` e o `RankingClient` com uma resposta de rede simulada.
-- Os testes de `Player`/`Shield`/`Bullet`/`EnemyManager` usam as classes do SFML; se o ambiente de testes não tiver as DLLs do SFML ao lado do binário,
+- Os testes de `Player`/`Shield`/`Bullet`/`Enemy`/`EnemyManager` usam as classes do SFML; se o ambiente de testes não tiver as DLLs do SFML ao lado do binário,
   o carregamento falha antes de qualquer teste rodar (o evento pós-build resolve isso na máquina de desenvolvimento).
+- Em Linux/macOS o Microsoft C++ Unit Test Framework não existe: os testes rodam no Visual Studio (Windows). O jogo em si compila nas três plataformas com CMake.
