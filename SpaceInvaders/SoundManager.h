@@ -26,8 +26,6 @@ enum class SoundId
 class SoundManager
 {
 public:
-    SoundManager();
-
     static SoundManager &instance()
     {
         static SoundManager s;
@@ -52,6 +50,8 @@ public:
     float getMasterVolume() const { return m_masterVol; }
 
 private:
+    SoundManager();
+
     static constexpr std::size_t kSoundCount = static_cast<std::size_t>(SoundId::Count);
     static constexpr std::size_t kVoicePoolSize = 32;
 
