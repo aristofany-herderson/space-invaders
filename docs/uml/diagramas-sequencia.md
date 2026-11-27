@@ -1,6 +1,6 @@
 # Diagramas de sequência
 
-Quatro cenários: os três primeiros descrevem o **código atual** (quadro de jogo, colisão polimórfica e montagem de onda) e o último descreve o **comportamento-alvo** do ranking online.
+Quatro cenários, todos descrevendo o **código atual**: quadro de jogo, colisão polimórfica, montagem de onda e ranking online.
 
 ## 1. Um quadro de jogo
 
@@ -102,10 +102,11 @@ sequenceDiagram
     Note over G,EM: Em cada update, EM chama enemy->update(), que usa move() e attack() da subclasse
 ```
 
-## 4. Fim de partida e ranking online (alvo, ainda não implementado)
+## 4. Fim de partida e ranking online
 
-Fluxo previsto para o diferencial do projeto, com o tratamento de falhas de rede.
-O envio deve acontecer em outra thread, para não travar o jogo.
+Fluxo de `Game.cpp` (estados `GameOver` → `NameEntry` → `Ranking`), `RankingClient.cpp` e `server/server.js`.
+A rede roda em outra thread (`std::async`), então a janela continua desenhando enquanto espera; o `Game` só olha o resultado
+em `pollRanking()`, chamado a cada quadro.
 
 ```mermaid
 sequenceDiagram
@@ -113,37 +114,41 @@ sequenceDiagram
     actor J as Jogador
     participant G as Game
     participant ST as Storage
-    participant N as NameInputScreen
+    participant T as Thread do ranking
     participant RC as RankingClient
-    participant API as API REST (Firebase ou Supabase)
-    participant RS as RankingScreen
+    participant API as server.js
+    participant DB as PostgreSQL
 
-    G->>G: Player.isAlive() == false, estado = GameOver
-    G->>ST: writeHighScore("hiscore.dat", score)
+    G->>G: jogador sem vidas, estado = GameOver
+    G->>ST: writeHighScore("hiscore.dat", score) se for recorde
     alt falha ao gravar
         ST--xG: PersistenceException
-        G->>G: registra no log e continua
+        G->>G: registra no std::cerr e continua
     end
-    G->>N: abre a tela de nome
-    J->>N: digita o nome e confirma
-    N-->>G: ScoreEntry(nome, pontos, onda)
-    G->>RC: submitScore(entry) em thread separada
-    RC->>API: POST /scores (JSON)
-    alt sucesso (HTTP 2xx)
-        API-->>RC: 201 Created
-        RC-->>G: ok
-    else sem rede, timeout ou HTTP 4xx/5xx
-        API--xRC: erro
-        RC--xG: NetworkException
-        G->>G: avisa "ranking indisponível" e segue sem travar
+    J->>G: Enter
+    G->>G: estado = NameEntry (se fez pontos)
+    J->>G: digita o nome (até 16 letras) e Enter
+    G->>G: openRanking(ScoreEntry), estado = Ranking, "SENDING..."
+    G-)T: std::async(submitScore + fetchTop(10))
+    T->>RC: submitScore(entry)
+    RC->>API: POST /scores {"name", "score"}
+    API->>DB: INSERT INTO scores
+    API-->>RC: 201 Created
+    T->>RC: fetchTop(10)
+    RC->>API: GET /scores?limit=10
+    API->>DB: SELECT ... ORDER BY score DESC
+    API-->>RC: JSON
+    RC->>RC: parseScores(json)
+    RC-->>T: vector de ScoreEntry
+    loop a cada quadro
+        G->>T: future pronto?
     end
-    J->>G: escolhe "Ranking"
-    G->>RS: abre a tela
-    loop a cada N segundos enquanto a tela estiver aberta
-        RS->>RC: fetchTop(10)
-        RC->>API: GET /scores?order=score.desc&limit=10
-        API-->>RC: JSON
-        RC-->>RS: vector de ScoreEntry
-        RS->>RS: atualiza a lista na tela
+    alt sucesso
+        T-->>G: future.get() devolve a lista
+        G->>G: desenha o top 10 destacando o jogador
+    else servidor fora do ar, timeout de 3 s, HTTP de erro ou JSON inválido
+        T--xG: future.get() relança NetworkException
+        G->>G: registra no std::cerr e mostra "RANKING OFFLINE"
     end
+    Note over API: após cada POST, o servidor avisa a página web do placar (Server-Sent Events em /scores/stream)
 ```

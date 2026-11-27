@@ -52,12 +52,12 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)SpaceInvaders;$(SFML_DIR)\include;$(VCInstallDir)UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\SpaceInvaders;$(SFML_DIR)\include;$(VCInstallDir)Auxiliary\VS\UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SFML_DIR)\lib;$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SFML_DIR)\lib;$(VCInstallDir)Auxiliary\VS\UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>sfml-graphics-d.lib;sfml-window-d.lib;sfml-system-d.lib;sfml-audio-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
@@ -71,12 +71,12 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)SpaceInvaders;$(SFML_DIR)\include;$(VCInstallDir)UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\SpaceInvaders;$(SFML_DIR)\include;$(VCInstallDir)Auxiliary\VS\UnitTest\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SFML_DIR)\lib;$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SFML_DIR)\lib;$(VCInstallDir)Auxiliary\VS\UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>sfml-graphics.lib;sfml-window.lib;sfml-system.lib;sfml-audio.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
@@ -91,6 +91,7 @@
     <ClCompile Include="ShieldTests.cpp" />
     <ClCompile Include="BulletTests.cpp" />
     <ClCompile Include="EnemyManagerTests.cpp" />
+    <ClCompile Include="EnemyHierarchyTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <!-- Codigo do jogo compilado junto com os testes (sem Game.cpp nem main) -->
@@ -101,6 +102,8 @@
     <ClCompile Include="..\SpaceInvaders\Bullet.cpp" />
     <ClCompile Include="..\SpaceInvaders\Particle.cpp" />
     <ClCompile Include="..\SpaceInvaders\Enemy.cpp" />
+    <ClCompile Include="..\SpaceInvaders\EnemyFactory.cpp" />
+    <ClCompile Include="..\SpaceInvaders\EnemyManager.cpp" />
     <ClCompile Include="..\SpaceInvaders\Spritegen.cpp" />
     <ClCompile Include="..\SpaceInvaders\SoundManager.cpp" />
   </ItemGroup>

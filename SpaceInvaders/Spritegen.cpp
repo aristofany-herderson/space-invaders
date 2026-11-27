@@ -3,7 +3,11 @@
 #include <cmath>
 #include <iostream>
 
-TextureBank GFX;
+TextureBank &textureBank()
+{
+    static TextureBank bank;
+    return bank;
+}
 
 static void fillPixel(sf::Image &img, int x, int y, sf::Color c)
 {

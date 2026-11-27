@@ -3,9 +3,9 @@
 Modelo da arquitetura descrita na proposta (Checkpoint 1, Parte A). Classes novas ou alteradas em relação a
 [diagrama-classes-atual.md](diagrama-classes-atual.md) estão marcadas com `<<novo>>` ou `<<muda>>`.
 
-> A hierarquia de inimigos, `Damageable`, `EnemyFactory` e o `SoundManager` (Singleton) já estão **implementados** como
-> aparecem abaixo. O ranking online (`RankingClient`, `ScoreEntry`, `RankingScreen`, `NameInputScreen`, `NetworkException`)
-> continua sendo proposta do Mairon.
+> Tudo o que aparece abaixo já está **implementado**: hierarquia de inimigos, `Damageable`, `EnemyFactory`, `SoundManager` (Singleton),
+> exceções e o ranking online. No ranking, a entrada do nome e a tela de ranking acabaram virando estados do `Game`
+> (`GameState::NameEntry` e `GameState::Ranking`), e não classes separadas como na proposta inicial.
 
 ```mermaid
 classDiagram
@@ -160,7 +160,25 @@ classDiagram
         -collide(Bullet, Damageable, radius) optional~DamageResult~
         -hitShields(Bullet) bool
         -damagePlayer(amount, impact) DamageResult
-        -submitScore()
+        -string m_playerName
+        -future~vector~ScoreEntry~~ m_rankingTask
+        -vector~ScoreEntry~ m_ranking
+        -openRanking(optional~ScoreEntry~ submit)
+        -pollRanking()
+        -drawNameEntry()
+        -drawRanking()
+    }
+
+    class GameState {
+        <<enumeration>>
+        Menu
+        Countdown
+        Playing
+        Paused
+        GameOver
+        Win
+        NameEntry
+        Ranking
     }
 
     class BulletManager {
@@ -179,33 +197,31 @@ classDiagram
 
     %% ---------- Ranking online (extras: API + banco) ----------
     class RankingClient {
-        <<novo>>
-        -string baseUrl
-        -string apiKey
-        +submitScore(ScoreEntry) void
-        +fetchTop(int n) vector~ScoreEntry~
+        <<namespace - novo>>
+        +submitScore(ScoreEntry entry)$ void
+        +fetchTop(int n)$ vector~ScoreEntry~
+        +parseScores(string json)$ vector~ScoreEntry~
     }
 
     class ScoreEntry {
         <<novo>>
         +string playerName
         +int score
-        +int wave
     }
 
-    class RankingScreen {
-        <<novo>>
-        -vector~ScoreEntry~ entries
-        -float refreshTimer
-        +update(dt)
-        +draw(rt)
+    class RankingServer {
+        <<server/server.js - Node.js>>
+        +GET /scores
+        +POST /scores
+        +GET /scores/stream
     }
 
-    class NameInputScreen {
-        <<novo>>
-        -string name
-        +handleEvent(ev)
-        +draw(rt)
+    class scores {
+        <<tabela PostgreSQL>>
+        +int id
+        +string name
+        +int score
+        +timestamp created_at
     }
 
     %% ---------- Persistência local e exceções ----------
@@ -230,7 +246,7 @@ classDiagram
         <<novo>>
     }
     class NetworkException {
-        <<novo - Mairon>>
+        <<novo>>
     }
 
     %% ---------- Relações ----------
@@ -260,13 +276,13 @@ classDiagram
     Game ..> Damageable : colisão polimórfica
     Game ..> SoundManager : SFX
     Game ..> Storage
-    Game ..> RankingClient
-    Game *-- RankingScreen
-    Game *-- NameInputScreen
+    Game --> GameState
+    Game ..> RankingClient : em outra thread (async)
+    Game ..> ScoreEntry : monta com nome e pontos
 
     RankingClient ..> ScoreEntry
-    RankingScreen ..> RankingClient : consulta a cada N s
-    NameInputScreen ..> ScoreEntry : monta
+    RankingClient ..> RankingServer : HTTP (WinHTTP)
+    RankingServer ..> scores : SQL
 
     GameException <|-- AssetLoadException
     GameException <|-- PersistenceException
@@ -287,8 +303,8 @@ classDiagram
 | Polimorfismo | `Game::collide(Bullet, Damageable)` trata `Shield` e `Player` da mesma forma e `EnemyManager` aplica o dano em qualquer `Enemy` pela mesma interface; cada `Enemy` se move/ataca do seu jeito |
 | Padrão Factory | `EnemyFactory` monta as formações de cada onda e cria o UFO |
 | Padrão Singleton | `SoundManager::instance()`, com construtor privado e cópia proibida |
-| Tratamento de exceções | hierarquia `GameException` (já implementada em `Exceptions.h`; `NetworkException` fica com o Mairon) |
-| API / banco / GUI | `RankingClient` (REST via libcurl), `RankingScreen`, `NameInputScreen` |
+| Tratamento de exceções | hierarquia `GameException` em `Exceptions.h`: `AssetLoadException`, `PersistenceException`/`InvalidDataException` (lançadas por `Storage`) e `NetworkException` (lançada por `RankingClient`) |
+| API / banco / GUI | `RankingClient` (REST via WinHTTP) → `server/server.js` (Node.js) → tabela `scores` (PostgreSQL); telas `NameEntry` e `Ranking` desenhadas pelo `Game` com SFML |
 
 ## Decisões de projeto
 
@@ -298,5 +314,9 @@ classDiagram
 2. **Propriedade dos inimigos**: `std::unique_ptr<Enemy>` em `EnemyManager`; a Factory devolve `unique_ptr`, e quem recebe passa a ser o dono.
 3. **O UFO** deixou de ter estado próprio dentro de `EnemyManager` e é mais um `Enemy` criado pela Factory (`EnemyFactory::createUfo`).
 4. **`EnemyType`** continua em `Spritegen.h`, porque também indexa as texturas; a Factory o usa para escolher a subclasse.
+5. **Ranking sem travar o jogo**: `Game::openRanking` dispara `submitScore` + `fetchTop` com `std::async`, e `Game::pollRanking`
+   confere a cada quadro se o resultado chegou. Uma `NetworkException` lançada na thread só aparece no `future::get()`, onde o `Game`
+   a captura e mostra `RANKING OFFLINE`.
+6. **`RankingClient` é um namespace**, não uma classe: não guarda estado (o endereço vem de `RANKING_HOST`/`RANKING_PORT` em `Constants.h`).
 5. **`FormationState`** (deslocamento lateral, degrau vertical e onda) é passado a `Enemy::update`, então as subclasses se movem sem conhecer o `EnemyManager`.
 6. **Template Method**: `Enemy::update` define a ordem (movimento e tiro) e as subclasses preenchem `move`, `attack` e `canAttack`.
