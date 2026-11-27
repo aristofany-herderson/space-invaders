@@ -32,7 +32,7 @@ e o reorganizamos para aplicar os conceitos da disciplina:
 - **Interface e polimorfismo:** `Damageable`, implementada por `Player`, `Enemy` e `Shield`.
 - **Padrões de projeto:** `EnemyFactory` (Factory) e `SoundManager` (Singleton), justificados na seção "Padrões de projeto".
 - **Tratamento de exceções:** hierarquia `GameException` (veja a seção "Tratamento de exceções").
-- **Extras:** GUI (SFML), banco de dados e API REST (libcurl) para o ranking online.
+- **Extras:** GUI (SFML), banco de dados (PostgreSQL) e API REST (servidor Node.js, cliente WinHTTP) para o ranking online.
 - **Testes unitários:** Microsoft C++ Unit Test Framework.
 
 **Equipe:** Aristofany Herderson Gomes de Souto Menezes, Leonardo Rosendo Faustino e Mairon Lima de Melo.
@@ -52,7 +52,7 @@ e o reorganizamos para aplicar os conceitos da disciplina:
 - CMake 3.21+ (Linux, Windows e macOS)
 - Visual Studio 2026 (opcional, também usado para os testes)
 - Microsoft C++ Unit Test Framework (testes)
-- libcurl + API REST (Firebase/Supabase), previsto para o ranking
+- Ranking online: servidor Node.js + PostgreSQL (`server/`) e cliente HTTP com WinHTTP, nativo do Windows
 
 <br/>
 
@@ -72,7 +72,9 @@ SpaceInvaders/                   código do jogo
     Spritegen, Random.h
     Exceptions.h                 hierarquia de exceções
     Storage                      leitura/gravação de hiscore.dat e settings.dat
+    RankingClient                cliente REST do ranking online
 SpaceInvaders.Tests/             projeto de testes unitários
+server/                          API REST do ranking (Node.js + PostgreSQL) e página web do placar
 docs/
     uml/                         diagramas de classes e de sequência
     testes.md                    como configurar e rodar os testes
@@ -110,11 +112,38 @@ Para usar um SFML já instalado, passe `-DCMAKE_PREFIX_PATH=/caminho/do/SFML`. A
 ## Visual Studio (Windows)
 
 1. Baixe o **SFML 3.1** (Visual C++, 64 bits) e extraia em uma pasta.
-2. Ajuste os diretórios de include e lib do SFML nas propriedades do projeto `SpaceInvaders` (hoje apontam para `C:\Users\arist\source\SFML-3.1.0`).
-3. Copie as DLLs do SFML (`sfml-*-d.dll` no Debug, `sfml-*.dll` no Release) para a pasta do executável.
+2. Informe essa pasta na variável de ambiente `SFML_DIR` e reinicie o Visual Studio. Sem ela, os dois projetos usam `C:\Users\arist\source\SFML-3.1.0`.
+
+   ```powershell
+   setx SFML_DIR "C:\caminho\para\SFML-3.1.0"
+   ```
+
+3. Copie as DLLs do SFML (`sfml-*-d-3.dll` no Debug, `sfml-*-3.dll` no Release, da pasta `bin/`) para a pasta do executável.
 4. Abra `SpaceInvaders.slnx` no **Visual Studio 2026**, escolha **x64** e compile/execute.
 
 O executável precisa encontrar a pasta `assets/` no diretório de trabalho.
+
+## Servidor do ranking (opcional)
+
+Sem o servidor, o jogo funciona normalmente e a tela de ranking mostra `RANKING OFFLINE`. Para ativá-lo, é preciso Node.js 22.9+ e um PostgreSQL:
+
+```bash
+cd server
+cp .env.example .env                                  # ajuste DATABASE_URL para o seu banco
+psql postgres://usuario:senha@host:5432/banco -f schema.sql   # a mesma URL do .env
+npm install
+npm start                                             # API em http://localhost:3000
+```
+
+| Rota | Uso |
+|---|---|
+| `GET /scores?limit=10` | maiores pontuações (JSON) |
+| `POST /scores` | grava `{"name": "...", "score": 123}` (nome de 1 a 16 caracteres) |
+| `GET /scores/stream` | placar em tempo real (Server-Sent Events) |
+| `GET /` | página web do placar |
+
+O jogo envia e consulta as pontuações em `localhost:3000` (constantes `RANKING_HOST` e `RANKING_PORT` em `Constants.h`).
+Abrindo `http://localhost:3000` no navegador, aparece o placar web, que se atualiza sozinho a cada nova pontuação.
 
 <br/>
 
@@ -126,7 +155,9 @@ O jogador controla uma nave e deve sobreviver a ondas sucessivas de inimigos, bu
 |---|---|
 | Mover | `←` `→` ou `A` `D` |
 | Atirar | `Espaço` ou `Z` |
-| Pausar | `P`, `Esc` ou o botão de pausa no HUD |
+| Pausar | `Esc` ou o botão de pausa no HUD (`Esc` ou `P` retomam, `M` volta ao menu) |
+| Ver o ranking | `L` no menu |
+| Registrar a pontuação | `Enter` no fim da partida, digitar o nome e `Enter` |
 
 <br/>
 
@@ -141,7 +172,8 @@ O jogador controla uma nave e deve sobreviver a ondas sucessivas de inimigos, bu
 - ✅ Recorde salvo em arquivo
 - ✅ Dificuldade progressiva
 - ✅ Botão de pausa e controle de volume
-- 🚧 Ranking online com atualização automática (em desenvolvimento)
+- ✅ Ranking online: nome do jogador ao fim da partida, envio ao servidor e tela de ranking no jogo
+- ✅ Placar web que se atualiza sozinho a cada nova pontuação
 
 <br/>
 
@@ -169,6 +201,7 @@ Módulos principais:
 - **SoundManager**: áudio (Singleton)
 - **Spritegen**: carregamento e geração de sprites
 - **Storage**: persistência local do recorde e do volume
+- **RankingClient**: envio e consulta das pontuações na API do ranking
 
 <br/>
 
@@ -192,8 +225,9 @@ As falhas previstas usam a hierarquia definida em [`Exceptions.h`](SpaceInvaders
 std::runtime_error
 └── GameException
     ├── AssetLoadException        recurso obrigatório não carregou (ex.: fonte)
-    └── PersistenceException      falha ao ler/gravar arquivo
-        └── InvalidDataException  arquivo existe, mas o conteúdo é inválido
+    ├── PersistenceException      falha ao ler/gravar arquivo
+    │   └── InvalidDataException  arquivo existe, mas o conteúdo é inválido
+    └── NetworkException          falha ao falar com o servidor de ranking
 ```
 
 | Situação | Comportamento |
@@ -203,6 +237,8 @@ std::runtime_error
 | não é possível gravar o recorde/volume | `PersistenceException`; o jogo registra o erro e continua |
 | fonte `assets/fonts/font.ttf` ausente | `AssetLoadException`; `main` mostra a mensagem e encerra com código 2 |
 | argumento inválido (pontuação negativa, volume fora de 0–100) | `std::invalid_argument` |
+| servidor de ranking fora do ar, *timeout* (3 s) ou resposta de erro/inválida | `NetworkException`, lançada na thread do ranking; o `Game` a captura ao buscar o resultado e mostra `RANKING OFFLINE`, sem travar o jogo |
+| tipo de inimigo desconhecido na `EnemyFactory` | `std::invalid_argument` (erro de programação) |
 
 Sprites e sons ausentes não derrubam o jogo: os sprites têm *fallback* procedural e os sons são ignorados.
 
@@ -211,14 +247,13 @@ Sprites e sons ausentes não derrubam o jogo: os sprites têm *fallback* procedu
 # ✅ Testes
 
 Projeto [`SpaceInvaders.Tests`](SpaceInvaders.Tests) com o Microsoft C++ Unit Test Framework.
-Para rodar: abra a solução, compile em **x64** e use **Teste → Gerenciador de Testes → Executar Tudo**.
+Para rodar: defina `SFML_DIR` (veja "Visual Studio" acima), abra a solução, compile em **x64** e use **Teste → Gerenciador de Testes → Executar Tudo**.
 Passo a passo e lista do que é coberto em [`docs/testes.md`](docs/testes.md).
 
 <br/>
 
 # 📈 Próximos passos
 
-- Ranking online (API REST + banco), tela de ranking e entrada do nome
 - Modos de dificuldade, controle e conquistas
 
 <br/>

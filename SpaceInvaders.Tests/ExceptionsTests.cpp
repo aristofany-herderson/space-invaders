@@ -46,9 +46,11 @@ namespace SpaceInvadersTests
                     throw AssetLoadException("a");
                 if (qual == 1)
                     throw PersistenceException("b", "x");
+                if (qual == 2)
+                    throw NetworkException("offline");
                 throw InvalidDataException("c", "y");
             };
-            for (int i = 0; i < 3; ++i)
+            for (int i = 0; i < 4; ++i)
             {
                 bool capturada = false;
                 try
@@ -76,6 +78,38 @@ namespace SpaceInvadersTests
                 Assert::AreEqual(0, std::strcmp("falha", e.what()));
             }
             Assert::IsTrue(capturada);
+        }
+
+        TEST_METHOD(NetworkException_IdentificaORankingNaMensagem)
+        {
+            NetworkException e("servidor indisponivel");
+            Assert::IsNotNull(std::strstr(e.what(), "Ranking"));
+            Assert::IsNotNull(std::strstr(e.what(), "servidor indisponivel"));
+        }
+
+        TEST_METHOD(NetworkException_NaoEhErroDePersistencia)
+        {
+            // Quem trata falha de arquivo (PersistenceException) nao pode engolir
+            // falha de rede por engano: as duas sao irmas abaixo de GameException.
+            bool comoPersistencia = false;
+            bool comoGame = false;
+            try
+            {
+                try
+                {
+                    throw NetworkException("timeout");
+                }
+                catch (const PersistenceException &)
+                {
+                    comoPersistencia = true;
+                }
+            }
+            catch (const GameException &)
+            {
+                comoGame = true;
+            }
+            Assert::IsFalse(comoPersistencia);
+            Assert::IsTrue(comoGame);
         }
     };
 }
