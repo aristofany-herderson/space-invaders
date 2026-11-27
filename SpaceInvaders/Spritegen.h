@@ -42,4 +42,8 @@ private:
     static bool tryLoad(sf::Texture &tex, const std::string &path);
 };
 
-extern TextureBank GFX;
+// Banco de texturas compartilhado, criado na primeira chamada (e nao como variavel
+// global): sf::Texture cria um contexto OpenGL no construtor e, como global, isso
+// rodaria durante o carregamento da DLL de testes, travando o Test Explorer.
+TextureBank &textureBank();
+#define GFX textureBank()

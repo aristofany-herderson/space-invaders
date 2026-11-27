@@ -41,17 +41,7 @@ const char *SoundManager::fileNameFor(SoundId id)
     return "";
 }
 
-SoundManager::SoundManager()
-{
-    sf::SoundBuffer dummy;
-    m_pool.reserve(kVoicePoolSize);
-    m_poolBaseVol.reserve(kVoicePoolSize);
-    for (std::size_t i = 0; i < kVoicePoolSize; ++i)
-    {
-        m_pool.emplace_back(dummy);
-        m_poolBaseVol.push_back(80.f);
-    }
-}
+SoundManager::SoundManager() = default;
 
 void SoundManager::loadAll()
 {
@@ -68,6 +58,21 @@ void SoundManager::loadAll()
         {
             m_loaded[i] = false;
             std::cerr << "[SoundManager] nao encontrado: " << path << "\n";
+        }
+    }
+
+    // O pool de vozes so e criado aqui, e nao no construtor: cada sf::Sound liga o
+    // dispositivo de audio (com uma thread propria), e os testes unitarios usam o
+    // SoundManager sem carregar sons. Ligar o audio dentro da DLL de testes faz o
+    // Test Explorer travar ou fechar quando a DLL e descarregada.
+    if (m_pool.empty())
+    {
+        m_pool.reserve(kVoicePoolSize);
+        m_poolBaseVol.reserve(kVoicePoolSize);
+        for (std::size_t i = 0; i < kVoicePoolSize; ++i)
+        {
+            m_pool.emplace_back(m_buffers[0]);
+            m_poolBaseVol.push_back(80.f);
         }
     }
 }
